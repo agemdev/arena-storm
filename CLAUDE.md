@@ -38,7 +38,7 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 
 ## Milestones
 - [x] M0 Setup (GitHub, Supabase, Vercel)
-- [ ] M1 Site institucional
+- [x] M1 Site institucional
 - [ ] M2 Login admin + cadastro clientes (balcão)
 - [ ] M3 Agendamentos (reserva, corujão, campeonato, aniversário)
 - [ ] M4 Caixa/consumo + Banco de Minutos

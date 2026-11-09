@@ -1,6 +1,7 @@
 import Header from "@/components/site/Header";
 import Hero from "@/components/site/Hero";
 import Estrutura from "@/components/site/Estrutura";
+import Galeria from "@/components/site/Galeria";
 import Precos from "@/components/site/Precos";
 import Torneios from "@/components/site/Torneios";
 import Local from "@/components/site/Local";
@@ -15,6 +16,7 @@ export default function Home() {
       <main>
         <Hero />
         <Estrutura />
+        <Galeria />
         <Precos />
         <Torneios />
         <Local />

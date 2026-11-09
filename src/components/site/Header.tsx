@@ -2,6 +2,7 @@ import { wa } from "@/lib/arena";
 
 const LINKS = [
   { href: "#estrutura", label: "Estrutura" },
+  { href: "#fotos", label: "Fotos" },
   { href: "#precos", label: "Preços" },
   { href: "#torneios", label: "Torneios" },
   { href: "#local", label: "Local" },
