@@ -1,9 +1,10 @@
-import { HORARIOS, JOGOS, NUMEROS, wa } from "@/lib/arena";
+import { JOGOS, NUMEROS, wa } from "@/lib/arena";
+import { agruparHorarios, horariosArena } from "@/lib/conteudo";
 import { perfilArena } from "@/lib/perfil";
 
 // Topo da página: chamada principal + horários + faixa de jogos
 export default async function Hero() {
-  const p = await perfilArena();
+  const [p, horarios] = await Promise.all([perfilArena(), horariosArena()]);
   return (
     <section className="hero-bg">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-2 md:py-24">
@@ -43,7 +44,7 @@ export default async function Hero() {
         <div className="glow rounded-3xl bg-card p-6 sm:p-8">
           <p className="font-display text-lg font-bold">🕒 Horário de funcionamento</p>
           <ul className="mt-4 divide-y divide-white/5">
-            {HORARIOS.map((h) => (
+            {agruparHorarios(horarios).map((h) => (
               <li key={h.dia} className="flex justify-between py-3 text-sm">
                 <span className="text-muted-foreground">{h.dia}</span>
                 <span className="font-semibold">{h.hora}</span>

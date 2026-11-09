@@ -1,10 +1,11 @@
-import { HORARIOS, wa } from "@/lib/arena";
+import { wa } from "@/lib/arena";
+import { agruparHorarios, horariosArena } from "@/lib/conteudo";
 import { perfilArena } from "@/lib/perfil";
 import Titulo from "./Titulo";
 
 // Endereço, contatos e mapa (dados do Perfil da arena)
 export default async function Local() {
-  const p = await perfilArena();
+  const [p, horarios] = await Promise.all([perfilArena(), horariosArena()]);
   const busca = encodeURIComponent(`${p.nome}, ${p.endereco}`);
   const mapa = `https://www.google.com/maps?q=${busca}&output=embed`;
   const rota = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.endereco)}`;
@@ -22,7 +23,7 @@ export default async function Local() {
             </a>
             <h3 className="mt-6 text-xs tracking-wider text-dim uppercase">Horários</h3>
             <ul className="mt-2 space-y-2 text-sm">
-              {HORARIOS.map((h) => (
+              {agruparHorarios(horarios).map((h) => (
                 <li key={h.dia} className="flex justify-between">
                   <span className="text-muted-foreground">{h.dia}</span>
                   <span className="font-semibold">{h.hora}</span>

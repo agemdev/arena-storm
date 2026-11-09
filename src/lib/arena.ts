@@ -1,16 +1,10 @@
-// Textos fixos do site (preços, horários, jogos...). Mudou? Edite aqui.
-// Nome, logo, endereço e contatos vêm do Perfil da arena no painel (src/lib/perfil.ts).
+// Textos fixos do site (estrutura, jogos, torneios, dúvidas). Mudou? Edite aqui.
+// Perfil, horários e preços vêm do painel → Configurações (src/lib/perfil.ts e conteudo.ts).
 
 // Link do WhatsApp com mensagem pronta
 export function wa(numero: string, msg = "Olá! Vim pelo site.") {
   return `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
 }
-
-export const HORARIOS = [
-  { dia: "Segunda a Sexta", hora: "9h — 22h" },
-  { dia: "Sábado", hora: "9h — 23h" },
-  { dia: "Domingo", hora: "14h — 23h" },
-];
 
 export const NUMEROS = [
   { valor: "10", label: "PCs gamer" },
@@ -32,18 +26,6 @@ export const JOGOS = [
   "League of Legends", "Rocket League", "Call of Duty", "Free Fire", "Exclusivos PS5",
 ];
 
-export const PLANOS = [
-  { nome: "Hora Avulsa", preco: "R$ 12", unidade: "/hora", itens: ["Qualquer setup disponível", "Periféricos inclusos", "Monitores 180Hz"] },
-  { nome: "Passaporte 5h", preco: "R$ 50", unidade: "/5 horas", destaque: true, itens: ["5 horas de jogo", "Prioridade na escolha do setup", "Participação em sorteios"] },
-  { nome: "Corujão", preco: "R$ 70", unidade: "/noite", itens: ["Das 22h às 6h", "Arena inteira", "Lanches da madrugada"] },
-  { nome: "Realidade Virtual", preco: "R$ 10", unidade: "/30 min", itens: ["Óculos VR standalone", "Sessão de 30 minutos", "Jogos imersivos"] },
-];
-
-export const FESTAS = [
-  { nome: "Aniversário P", preco: "R$ 699", texto: "Até 10 pessoas · 3 horas" },
-  { nome: "Aniversário G", preco: "R$ 999", texto: "Até 15 pessoas · 3 horas + bônus" },
-];
-
 // Torneios fixos por enquanto. No M3 virão do banco de dados.
 export const TORNEIOS = [
   { dia: "20", mes: "DEZ", titulo: "Camp de FC 26", texto: "20 de dezembro de 2026" },
@@ -53,7 +35,7 @@ export const TORNEIOS = [
 export const FAQ = [
   { p: "Como faço pra reservar?", r: "Chama a gente no WhatsApp com o dia, horário e quantas pessoas. A equipe confirma rapidinho." },
   { p: "Quais jogos estão disponíveis?", r: `${JOGOS.join(", ")}. Quer algo específico? Avisa a equipe que a gente instala.` },
-  { p: "Posso fazer aniversário na Arena?", r: "Pode! Pacotes de R$ 699 (até 10 pessoas, 3h) e R$ 999 (até 15 pessoas, 3h + bônus). Agende pelo WhatsApp." },
+  { p: "Posso fazer aniversário na Arena?", r: "Pode! Temos pacotes de festa — veja os valores na seção Preços e agende pelo WhatsApp." },
   { p: "Preciso levar meu equipamento?", r: "Não. Headset, teclado, mouse e monitor estão inclusos. Se preferir, pode trazer seu headset ou mousepad." },
   { p: "Tem comida e bebida?", r: "Tem lanches e bebidas na arena. E o ambiente é climatizado." },
 ];
