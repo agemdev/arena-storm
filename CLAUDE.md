@@ -50,3 +50,5 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 ## Status
 Milestone atual: M1 (dados e visual da arena em `ARENA-INFO.md`)
 Repo: https://github.com/agemdev/arena-storm
+Site: https://arena-storm.vercel.app (Vercel equipe `agemdev`) · Supabase: projeto `fwjwowvblkukqroyqoca` (sa-east-1)
+Migrations: `supabase/migrations/` (aplicar via conector Supabase)
