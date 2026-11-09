@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { AlarmClock, TimerOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { estenderTempo, situacaoTempos } from "@/app/painel/caixa/actions";
 import { AVISO_MINUTOS, hhmm, minutosRestantes } from "@/lib/caixa";
@@ -12,15 +13,19 @@ type Encerrado = { id: string; nome: string; equipamento: string };
 
 const CONSULTA_MS = 30_000; // pergunta ao servidor a cada 30 s
 
-// Bipe curto quando aparece um aviso novo
-function bipe() {
+// Bipes: "acabando" = 2 bipes agudos; "acabou" = 3 bipes mais graves e longos
+function bipe(tipo: "acabando" | "acabou" = "acabando") {
   try {
     const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    osc.frequency.value = 880;
-    osc.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.25);
+    const [vezes, freq, dur] = tipo === "acabou" ? [3, 620, 0.35] : [2, 880, 0.2];
+    for (let i = 0; i < vezes; i++) {
+      const osc = ctx.createOscillator();
+      osc.frequency.value = freq;
+      osc.connect(ctx.destination);
+      const t = ctx.currentTime + i * (dur + 0.15);
+      osc.start(t);
+      osc.stop(t + dur);
+    }
   } catch {
     /* navegador sem som */
   }
@@ -45,7 +50,7 @@ export default function AlertasTempo() {
       setEmUso(r.emUso);
       if (r.encerrados.length) {
         setEncerrados((lista) => [...lista, ...r.encerrados]);
-        bipe();
+        bipe("acabou");
         router.refresh();
       }
     } catch {
@@ -101,84 +106,120 @@ export default function AlertasTempo() {
     });
   };
   const ocultar = (k: string) => setOcultos((s) => new Set(s).add(k));
+  const temAlerta = acabando.length + encerrados.length > 0;
+  const vermelho = encerrados.length > 0;
 
-  if (!acabando.length && !encerrados.length) return null;
+  // Título da aba pisca (dá para ver mesmo com outra aba aberta)
+  useEffect(() => {
+    if (!temAlerta) return;
+    const original = document.title;
+    const aviso = vermelho ? "⛔ TEMPO ACABOU" : "⏰ Tempo acabando";
+    let liga = false;
+    const t = setInterval(() => {
+      liga = !liga;
+      document.title = liga ? aviso : original;
+    }, 1000);
+    return () => {
+      clearInterval(t);
+      document.title = original;
+    };
+  }, [temAlerta, vermelho]);
+
+  if (!temAlerta) return null;
 
   return (
-    <div className="fixed right-4 bottom-4 z-50 flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col gap-2" role="status" aria-live="polite">
-      {acabando.map((a) => {
-        const r = minutosRestantes(a.fimPrevisto, agora!)!;
-        const k = chave(a);
-        return (
-          <div key={k} className="rounded-xl border border-amber/40 bg-card p-4 shadow-xl">
-            <p className="text-sm font-semibold text-amber">
-              ⏰ {a.equipamento}: {r > 0 ? `faltam ${r} min` : "tempo acabando"}
-            </p>
-            <p className="mt-1 text-sm">
-              <b>{a.nome}</b> (até {hhmm(a.fimPrevisto)}). O cliente vai continuar?
-            </p>
-            {respostaNao.has(k) ? (
-              <p className="mt-2 text-xs text-muted-foreground">Ok, encerra sozinho às {hhmm(a.fimPrevisto)}.</p>
-            ) : escolhendo === a.id ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {[
-                  ["30", "+30 min"],
-                  ["60", "+1h"],
-                  ["livre", "Tempo livre"],
-                ].map(([m, rotulo]) => (
-                  <button key={m} onClick={() => estender(a.id, m)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-                    {rotulo}
-                  </button>
-                ))}
-                <button onClick={() => setEscolhendo(null)} className="px-2 text-xs text-muted-foreground">
-                  Voltar
-                </button>
+    <>
+      {/* Moldura piscando na tela inteira: amarelo = acabando, vermelho = acabou */}
+      <div
+        aria-hidden
+        className={`pointer-events-none fixed inset-0 z-[45] animate-pulse border-[10px] ${vermelho ? "border-destructive" : "border-amber"}`}
+      />
+
+      <div className="fixed right-4 bottom-4 z-50 flex max-h-[calc(100vh-2rem)] w-[26rem] max-w-[calc(100vw-2rem)] flex-col gap-3 overflow-y-auto" role="alert" aria-live="assertive">
+        {encerrados.map((e, i) => (
+          <div key={`${e.id}-${i}`} className="rounded-2xl bg-destructive p-4 text-white shadow-2xl ring-4 ring-destructive/40">
+            <div className="flex items-center gap-3">
+              <TimerOff className="size-10 shrink-0 animate-pulse" />
+              <div>
+                <p className="text-xs font-bold tracking-widest uppercase opacity-90">Tempo acabou</p>
+                <p className="font-display text-2xl leading-tight font-black">{e.equipamento}</p>
               </div>
-            ) : (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button onClick={() => setEscolhendo(a.id)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-                  Sim, continuar
-                </button>
-                <button
-                  onClick={() => setRespostaNao((s) => new Set(s).add(k))}
-                  className="rounded-lg border border-border px-3 py-1.5 text-xs"
-                >
-                  Não
-                </button>
-                <button onClick={() => ocultar(k)} className="ml-auto px-2 text-xs text-muted-foreground hover:text-foreground">
-                  Fechar aviso
-                </button>
-              </div>
-            )}
-            {respostaNao.has(k) && (
-              <button onClick={() => ocultar(k)} className="mt-1 text-xs text-muted-foreground hover:text-foreground">
+            </div>
+            <p className="mt-2 text-base">
+              <b>{e.nome}</b>: atendimento encerrado. Faça o fechamento do pagamento.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Link
+                href={`/painel/caixa?abrir=${e.id}`}
+                scroll={false}
+                onClick={() => setEncerrados((l) => l.filter((x) => x !== e))}
+                className="rounded-lg bg-white px-4 py-2 text-sm font-bold text-destructive"
+              >
+                Abrir e receber
+              </Link>
+              <button onClick={() => setEncerrados((l) => l.filter((x) => x !== e))} className="ml-auto px-2 text-sm text-white/80 hover:text-white">
                 Fechar aviso
               </button>
-            )}
+            </div>
           </div>
-        );
-      })}
+        ))}
 
-      {encerrados.map((e, i) => (
-        <div key={`${e.id}-${i}`} className="rounded-xl border border-destructive/40 bg-card p-4 shadow-xl">
-          <p className="text-sm font-semibold text-destructive">⏹ Tempo acabou · {e.equipamento}</p>
-          <p className="mt-1 text-sm">
-            <b>{e.nome}</b>: atendimento encerrado. Faça o fechamento do pagamento.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Link
-              href={`/painel/caixa/${e.id}`}
-              onClick={() => setEncerrados((l) => l.filter((x) => x !== e))}
-              className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
-            >
-              Abrir e receber
-            </Link>
-            <button onClick={() => setEncerrados((l) => l.filter((x) => x !== e))} className="ml-auto px-2 text-xs text-muted-foreground">
-              Fechar aviso
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
+        {acabando.map((a) => {
+          const r = minutosRestantes(a.fimPrevisto, agora!)!;
+          const k = chave(a);
+          return (
+            <div key={k} className="rounded-2xl bg-amber p-4 text-black shadow-2xl ring-4 ring-amber/40">
+              <div className="flex items-center gap-3">
+                <AlarmClock className="size-10 shrink-0 animate-bounce" />
+                <div>
+                  <p className="text-xs font-bold tracking-widest uppercase opacity-80">
+                    {r > 0 ? `Faltam ${r} min` : "Acabando agora"}
+                  </p>
+                  <p className="font-display text-2xl leading-tight font-black">{a.equipamento}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-base">
+                <b>{a.nome}</b> (até {hhmm(a.fimPrevisto)}). O cliente vai continuar?
+              </p>
+              {respostaNao.has(k) ? (
+                <div className="mt-3 flex items-center gap-2 text-sm">
+                  <span>Ok, encerra sozinho às {hhmm(a.fimPrevisto)}.</span>
+                  <button onClick={() => ocultar(k)} className="ml-auto font-semibold underline">
+                    Fechar aviso
+                  </button>
+                </div>
+              ) : escolhendo === a.id ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[
+                    ["30", "+30 min"],
+                    ["60", "+1h"],
+                    ["livre", "Tempo livre"],
+                  ].map(([m, rotulo]) => (
+                    <button key={m} onClick={() => estender(a.id, m)} className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-amber">
+                      {rotulo}
+                    </button>
+                  ))}
+                  <button onClick={() => setEscolhendo(null)} className="px-2 text-sm">
+                    Voltar
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={() => setEscolhendo(a.id)} className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-amber">
+                    Sim, continuar
+                  </button>
+                  <button onClick={() => setRespostaNao((s) => new Set(s).add(k))} className="rounded-lg border-2 border-black px-4 py-2 text-sm font-bold">
+                    Não
+                  </button>
+                  <button onClick={() => ocultar(k)} className="ml-auto px-2 text-sm hover:underline">
+                    Fechar aviso
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

@@ -45,10 +45,10 @@ export function hhmm(ts: string | null) {
   return new Date(ts).toLocaleTimeString("pt-BR", { timeZone: FUSO, hour: "2-digit", minute: "2-digit" });
 }
 
-// "14:15" do dia do caixa → data/hora ISO. Se "fim" for menor que "inicio", vira o dia seguinte.
+// "14:15" do dia do caixa → data/hora ISO. Se "fim" for menor que "inicio", vira o dia seguinte (igual = 0h).
 export function paraTimestamp(data: string, hora: string, depoisDe?: string) {
   let ts = new Date(`${data}T${hora}:00${OFFSET}`);
-  if (depoisDe && ts <= new Date(depoisDe)) ts = new Date(ts.getTime() + 24 * 60 * 60 * 1000);
+  if (depoisDe && ts < new Date(depoisDe)) ts = new Date(ts.getTime() + 24 * 60 * 60 * 1000);
   return ts.toISOString();
 }
 
@@ -88,6 +88,9 @@ export type AtendimentoLinha = {
   observacao: string | null;
   ajuste: number;
   ajuste_motivo: string | null;
+  cancelado_em: string | null;
+  cancelado_motivo: string | null;
+  criado_em: string;
   equipamentos: { nome: string } | null;
   consumos: { total: number }[];
   pagamentos: { forma: Forma; valor: number }[];
@@ -95,20 +98,21 @@ export type AtendimentoLinha = {
 
 // Totais de um atendimento. Em uso → estima o valor até agora.
 export function totais(a: AtendimentoLinha) {
-  const emUso = !!a.inicio && !a.fim;
+  const cancelado = !!a.cancelado_em;
+  const emUso = !cancelado && !!a.inicio && !a.fim;
   const uso = calcularUso(a.inicio, a.fim, Number(a.valor_hora));
   const valorUso = emUso ? uso.valor : Number(a.valor_uso);
   const consumo = a.consumos.reduce((s, c) => s + Number(c.total), 0);
   const ajuste = Number(a.ajuste ?? 0);
-  const total = Math.max(0, valorUso + consumo + ajuste);
+  const total = cancelado ? 0 : Math.max(0, valorUso + consumo + ajuste);
   const pago = a.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
   const falta = Math.round((total - pago) * 100) / 100;
-  const status = emUso ? "em_uso" : falta > 0 ? "falta" : "pago";
-  return { emUso, minutos: uso.minutos, valorUso, consumo, ajuste, total, pago, falta, status } as const;
+  const status = cancelado ? "cancelado" : emUso ? "em_uso" : falta > 0 ? "falta" : "pago";
+  return { cancelado, emUso, minutos: uso.minutos, valorUso, consumo, ajuste, total, pago, falta, status } as const;
 }
 
 export const SELECT_ATENDIMENTO =
-  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
+  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
 
 // Aviso de tempo acabando: quantos minutos antes
 export const AVISO_MINUTOS = 5;

@@ -15,7 +15,7 @@ import {
 } from "@/lib/caixa";
 import { encerrarVencidos } from "@/lib/caixa-servidor";
 
-export type Resultado = { ok: boolean; msg: string; n?: number } | null;
+export type Resultado = { ok: boolean; msg: string; n?: number; abrir?: string } | null;
 
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
@@ -60,16 +60,15 @@ export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Re
   if (error) return { ok: false, msg: "Erro ao abrir atendimento." };
 
   atualizar();
-  // Só consumo → vai direto para lançar os produtos
-  if (!comTempo) redirect(`/painel/caixa/${novo.id}`);
-  return { ok: true, msg: `${nome} iniciado!`, n: Date.now() };
+  // Só consumo → abre a janela dele para lançar os produtos
+  return { ok: true, msg: `${nome} iniciado!`, n: Date.now(), abrir: comTempo ? undefined : `/painel/caixa?data=${data}&abrir=${novo.id}` };
 }
 
 // Encerrar agora: fim = agora e calcula o valor do uso
 export async function encerrarAtendimento(form: FormData) {
   const { supabase } = await exigirAdmin();
   const id = String(form.get("id"));
-  const { data: a } = await supabase.from("atendimentos").select("inicio, fim, valor_hora").eq("id", id).single();
+  const { data: a } = await supabase.from("atendimentos").select("inicio, fim, valor_hora").eq("id", id).is("cancelado_em", null).single();
   if (!a || a.fim || !a.inicio) return;
   const fim = new Date().toISOString();
   const { valor } = calcularUso(a.inicio, fim, Number(a.valor_hora));
@@ -82,7 +81,7 @@ export async function estenderTempo(form: FormData) {
   const { supabase } = await exigirAdmin();
   const id = String(form.get("id"));
   const extra = String(form.get("minutos"));
-  const { data: a } = await supabase.from("atendimentos").select("fim, fim_previsto").eq("id", id).single();
+  const { data: a } = await supabase.from("atendimentos").select("fim, fim_previsto").eq("id", id).is("cancelado_em", null).single();
   if (!a || a.fim) return;
   let fimPrevisto: string | null = null;
   if (extra !== "livre") {
@@ -100,6 +99,7 @@ export async function reabrirTempo(form: FormData) {
     .from("atendimentos")
     .update({ fim: null, fim_previsto: null, valor_uso: 0 })
     .eq("id", String(form.get("id")))
+    .is("cancelado_em", null)
     .not("inicio", "is", null);
   atualizar();
 }
@@ -234,6 +234,9 @@ export async function receber(_: Resultado, form: FormData): Promise<Resultado> 
   if (!(forma in FORMAS)) return { ok: false, msg: "Escolha a forma de pagamento." };
   if (!(valor > 0)) return { ok: false, msg: "Digite o valor recebido." };
 
+  const { data: at } = await supabase.from("atendimentos").select("cancelado_em").eq("id", String(form.get("atendimento_id"))).single();
+  if (at?.cancelado_em) return { ok: false, msg: "Atendimento cancelado: desfaça o cancelamento antes de receber." };
+
   const { error } = await supabase
     .from("pagamentos")
     .insert({ arena_id: arenaId, atendimento_id: String(form.get("atendimento_id")), forma, valor });
@@ -259,4 +262,40 @@ export async function excluirAtendimento(form: FormData) {
   await supabase.from("atendimentos").delete().eq("id", String(form.get("id")));
   atualizar();
   redirect(`/painel/caixa?data=${a?.data ?? hojeISO()}`);
+}
+
+// Cancelar a qualquer momento: para o tempo, estorna pagamentos e zera o valor (fica no histórico)
+export async function cancelarAtendimento(_: Resultado, form: FormData): Promise<Resultado> {
+  const { supabase } = await exigirAdmin();
+  const id = String(form.get("id"));
+  const { data: a } = await supabase.from("atendimentos").select("inicio, fim, valor_hora, cancelado_em").eq("id", id).single();
+  if (!a) return { ok: false, msg: "Atendimento não encontrado." };
+  if (a.cancelado_em) return { ok: true, msg: "Já estava cancelado." };
+
+  // Pagamentos voltam (minutos são devolvidos automaticamente)
+  const { error: errPag } = await supabase.from("pagamentos").delete().eq("atendimento_id", id);
+  if (errPag) return { ok: false, msg: "Erro ao estornar pagamentos." };
+
+  const agora = new Date().toISOString();
+  const fim = a.inicio && !a.fim ? agora : a.fim; // em uso → para agora (libera a máquina)
+  const { error } = await supabase
+    .from("atendimentos")
+    .update({
+      cancelado_em: agora,
+      cancelado_motivo: String(form.get("motivo") ?? "").trim().slice(0, 200) || null,
+      fim,
+      fim_previsto: null,
+      valor_uso: a.inicio ? calcularUso(a.inicio, fim, Number(a.valor_hora)).valor : 0,
+    })
+    .eq("id", id);
+  if (error) return { ok: false, msg: "Erro ao cancelar." };
+  atualizar();
+  return { ok: true, msg: "Cancelado." };
+}
+
+// Desfaz o cancelamento (o tempo continua encerrado; receba de novo se preciso)
+export async function desfazerCancelamento(form: FormData) {
+  const { supabase } = await exigirAdmin();
+  await supabase.from("atendimentos").update({ cancelado_em: null, cancelado_motivo: null }).eq("id", String(form.get("id")));
+  atualizar();
 }

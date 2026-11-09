@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { abrirAtendimento, type Resultado } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,11 +18,19 @@ type Props = {
   valorHora: string; // "12"
   clientes: ClienteOpcao[];
   equipamentos: EquipOpcao[];
+  onIniciado?: () => void; // fecha a janela depois de iniciar
 };
 
 // Formulário rápido: quem, qual máquina, que horas
 export default function NovoAtendimento(props: Props) {
   const [res, acao, enviando] = useActionState(abrirAtendimento, null);
+  const { onIniciado } = props;
+  const router = useRouter();
+  useEffect(() => {
+    if (!res?.ok) return;
+    onIniciado?.();
+    if (res.abrir) router.push(res.abrir, { scroll: false }); // só consumo → abre a janela dele
+  }, [res, onIniciado, router]);
   // key muda após iniciar → limpa os campos
   return <Campos key={res?.n ?? "f"} {...props} res={res} acao={acao} enviando={enviando} />;
 }
@@ -54,12 +63,12 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
   return (
     <form
       action={acao}
-      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_7rem_7rem_6rem] lg:items-start"
+      className="grid gap-4 sm:grid-cols-6 sm:items-start"
     >
       <input type="hidden" name="data" value={data} />
       <input type="hidden" name="cliente_id" value={cliente?.id ?? ""} />
 
-      <div className="relative space-y-2">
+      <div className="relative space-y-2 sm:col-span-6">
         <Label htmlFor="nome">Cliente</Label>
         <Input
           id="nome"
@@ -74,6 +83,7 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
           onBlur={() => setTimeout(() => setAberto(false), 150)}
           placeholder="Nome ou WhatsApp"
           autoComplete="off"
+          autoFocus
           required
         />
         {aberto && sugestoes.length > 0 && (
@@ -107,7 +117,7 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
         </p>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 sm:col-span-6">
         <Label htmlFor="equipamento_id">Máquina</Label>
         <NativeSelect id="equipamento_id" name="equipamento_id" value={equip} onChange={(e) => setEquip(e.target.value)}>
           <option value="livre">Livre (qualquer máquina)</option>
@@ -121,12 +131,12 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
         </NativeSelect>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="inicio">Início</Label>
         <Input id="inicio" name="inicio" type="time" value={ini} onChange={(e) => setIni(e.target.value)} disabled={!comTempo} />
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="fim_previsto">Fim</Label>
         <Input
           id="fim_previsto"
@@ -139,14 +149,14 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
         />
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="valor_hora">R$ / hora</Label>
         <Input id="valor_hora" name="valor_hora" inputMode="decimal" defaultValue={valorHora} disabled={!comTempo} />
       </div>
 
       {/* Atalhos de duração: preenchem o Fim a partir do Início */}
       {comTempo && (
-        <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-5">
+        <div className="flex flex-wrap items-center gap-2 sm:col-span-6">
           <span className="text-xs text-muted-foreground">Quanto tempo?</span>
           {DURACOES.map((d) => (
             <button
@@ -168,13 +178,13 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
         </div>
       )}
 
-      <div className="sm:col-span-2 lg:col-span-5">
+      <div className="sm:col-span-6">
         <Button type="submit" disabled={enviando}>
           {enviando ? "Abrindo..." : comTempo ? "Iniciar tempo" : "Lançar consumo"}
         </Button>
       </div>
 
-      {res && <p className={`text-sm sm:col-span-2 lg:col-span-5 ${res.ok ? "text-green" : "text-destructive"}`}>{res.msg}</p>}
+      {res && <p className={`text-sm sm:col-span-6 ${res.ok ? "text-green" : "text-destructive"}`}>{res.msg}</p>}
     </form>
   );
 }
