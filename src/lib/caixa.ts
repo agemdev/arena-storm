@@ -82,9 +82,12 @@ export type AtendimentoLinha = {
   equipamento_id: string | null;
   inicio: string | null;
   fim: string | null;
+  fim_previsto: string | null;
   valor_hora: number;
   valor_uso: number;
   observacao: string | null;
+  ajuste: number;
+  ajuste_motivo: string | null;
   equipamentos: { nome: string } | null;
   consumos: { total: number }[];
   pagamentos: { forma: Forma; valor: number }[];
@@ -96,12 +99,38 @@ export function totais(a: AtendimentoLinha) {
   const uso = calcularUso(a.inicio, a.fim, Number(a.valor_hora));
   const valorUso = emUso ? uso.valor : Number(a.valor_uso);
   const consumo = a.consumos.reduce((s, c) => s + Number(c.total), 0);
-  const total = valorUso + consumo;
+  const ajuste = Number(a.ajuste ?? 0);
+  const total = Math.max(0, valorUso + consumo + ajuste);
   const pago = a.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
   const falta = Math.round((total - pago) * 100) / 100;
   const status = emUso ? "em_uso" : falta > 0 ? "falta" : "pago";
-  return { emUso, minutos: uso.minutos, valorUso, consumo, total, pago, falta, status } as const;
+  return { emUso, minutos: uso.minutos, valorUso, consumo, ajuste, total, pago, falta, status } as const;
 }
 
 export const SELECT_ATENDIMENTO =
-  "id, data, nome, cliente_id, equipamento_id, inicio, fim, valor_hora, valor_uso, observacao, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
+  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
+
+// Aviso de tempo acabando: quantos minutos antes
+export const AVISO_MINUTOS = 5;
+
+// Minutos que faltam até o fim previsto (negativo = passou)
+export function minutosRestantes(fimPrevisto: string | null, agora = Date.now()) {
+  if (!fimPrevisto) return null;
+  return Math.ceil((new Date(fimPrevisto).getTime() - agora) / 60000);
+}
+
+// Durações rápidas para o "fim previsto"
+export const DURACOES = [
+  { min: 30, label: "30 min" },
+  { min: 60, label: "1h" },
+  { min: 90, label: "1h30" },
+  { min: 120, label: "2h" },
+  { min: 180, label: "3h" },
+];
+
+// "14:15" + 60 → "15:15"
+export function somarMinutosHora(hora: string, minutos: number) {
+  const [h, m] = hora.split(":").map(Number);
+  const t = (h * 60 + m + minutos) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}

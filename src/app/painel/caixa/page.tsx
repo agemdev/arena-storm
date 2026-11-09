@@ -18,7 +18,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import NovoAtendimento from "./NovoAtendimento";
-import { encerrarAtendimento } from "./actions";
+import { encerrarAtendimento, estenderTempo } from "./actions";
+import { encerrarVencidos } from "@/lib/caixa-servidor";
+import UsoAoVivo from "@/components/painel/UsoAoVivo";
 
 type Busca = PageProps<"/painel/caixa">["searchParams"];
 
@@ -39,6 +41,7 @@ const STATUS = {
 
 async function Caixa({ searchParams }: { searchParams: Busca }) {
   const { supabase, arenaId } = await exigirAdmin();
+  await encerrarVencidos(supabase); // quem passou do tempo combinado é encerrado
   const { data: d } = await searchParams;
   const hoje = hojeISO();
   const data = typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : hoje;
@@ -143,8 +146,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
                   <TableHead>Fim</TableHead>
                   <TableHead>Máquina</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead className="hidden md:table-cell">Uso</TableHead>
-                  <TableHead className="hidden md:table-cell text-right">Tempo</TableHead>
+                  <TableHead>Uso atual</TableHead>
                   <TableHead className="hidden md:table-cell text-right">Consumo</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead className="text-right">Falta</TableHead>
@@ -156,17 +158,25 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
                 {linhas.map(({ a, t }) => (
                   <TableRow key={a.id}>
                     <TableCell>{hhmm(a.inicio) || "—"}</TableCell>
-                    <TableCell>{hhmm(a.fim) || (t.emUso ? "…" : "—")}</TableCell>
-                    <TableCell>{a.equipamentos?.nome ?? "—"}</TableCell>
+                    <TableCell>
+                      {a.fim ? hhmm(a.fim) : a.fim_previsto ? <span className="text-muted-foreground">{hhmm(a.fim_previsto)}?</span> : t.emUso ? "livre" : "—"}
+                    </TableCell>
+                    <TableCell>{a.equipamentos?.nome ?? (a.inicio ? "Livre" : "—")}</TableCell>
                     <TableCell className="max-w-40 truncate font-medium">
                       <Link href={`/painel/caixa/${a.id}`} className="hover:text-cyan">
                         {a.nome}
                       </Link>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{a.inicio ? duracao(t.minutos) : "—"}</TableCell>
-                    <TableCell className="hidden text-right md:table-cell">
-                      {t.emUso && "≈ "}
-                      {reais(t.valorUso)}
+                    <TableCell>
+                      {t.emUso ? (
+                        <UsoAoVivo inicio={a.inicio!} fimPrevisto={a.fim_previsto} valorHora={Number(a.valor_hora)} />
+                      ) : a.inicio ? (
+                        <span>
+                          {duracao(t.minutos)} <span className="text-muted-foreground">· {reais(t.valorUso)}</span>
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell className="hidden text-right md:table-cell">{reais(t.consumo)}</TableCell>
                     <TableCell className="text-right font-semibold">{reais(t.total)}</TableCell>
@@ -180,10 +190,23 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
                     </TableCell>
                     <TableCell className="text-right">
                       {t.emUso ? (
-                        <form action={encerrarAtendimento}>
-                          <input type="hidden" name="id" value={a.id} />
-                          <Button type="submit" size="sm" variant="outline">Encerrar</Button>
-                        </form>
+                        <div className="flex justify-end gap-1">
+                          <form action={estenderTempo}>
+                            <input type="hidden" name="id" value={a.id} />
+                            <input type="hidden" name="minutos" value="30" />
+                            <Button type="submit" size="sm" variant="ghost" title="Mais 30 minutos">+30m</Button>
+                          </form>
+                          <form action={estenderTempo}>
+                            <input type="hidden" name="id" value={a.id} />
+                            <input type="hidden" name="minutos" value="60" />
+                            <Button type="submit" size="sm" variant="ghost" title="Mais 1 hora">+1h</Button>
+                          </form>
+                          <form action={encerrarAtendimento}>
+                            <input type="hidden" name="id" value={a.id} />
+                            <Button type="submit" size="sm" variant="outline">Encerrar</Button>
+                          </form>
+                          <Link href={`/painel/caixa/${a.id}`} className="self-center px-1 text-sm text-cyan hover:underline">Abrir</Link>
+                        </div>
                       ) : (
                         <Link href={`/painel/caixa/${a.id}`} className="text-sm text-cyan hover:underline">
                           {t.falta > 0 ? "Receber" : "Abrir"}

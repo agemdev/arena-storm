@@ -6,7 +6,18 @@ import { reais } from "@/lib/formatos";
 import { dataExtenso, duracao, FORMAS, hhmm, totais, type AtendimentoLinha, type Forma } from "@/lib/caixa";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { adicionarConsumo, encerrarAtendimento, estornarPagamento, excluirAtendimento, removerConsumo } from "../actions";
+import {
+  adicionarConsumo,
+  encerrarAtendimento,
+  estenderTempo,
+  estornarPagamento,
+  excluirAtendimento,
+  reabrirTempo,
+  removerConsumo,
+} from "../actions";
+import { encerrarVencidos } from "@/lib/caixa-servidor";
+import UsoAoVivo from "@/components/painel/UsoAoVivo";
+import AjustarValor from "./AjustarValor";
 import EditarAtendimento from "./EditarAtendimento";
 import Receber from "./Receber";
 
@@ -29,10 +40,11 @@ type Detalhe = Omit<AtendimentoLinha, "consumos" | "pagamentos"> & {
 async function Conteudo({ params }: { params: Params }) {
   const { id } = await params;
   const { supabase } = await exigirAdmin();
+  await encerrarVencidos(supabase);
   const { data } = await supabase
     .from("atendimentos")
     .select(
-      "id, data, nome, cliente_id, equipamento_id, inicio, fim, valor_hora, valor_uso, observacao, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em)",
+      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -65,7 +77,7 @@ async function Conteudo({ params }: { params: Params }) {
         ) : (
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Avulso</span>
         )}
-        {a.equipamentos && <span className="text-muted-foreground">· {a.equipamentos.nome}</span>}
+        {a.inicio && <span className="text-muted-foreground">· {a.equipamentos?.nome ?? "Livre (qualquer máquina)"}</span>}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
@@ -77,17 +89,46 @@ async function Conteudo({ params }: { params: Params }) {
                 <CardTitle>Tempo de uso</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-lg">
-                  {hhmm(a.inicio)} → {a.fim ? hhmm(a.fim) : <span className="text-cyan">em uso</span>} ·{" "}
-                  <b>{duracao(t.minutos)}</b> · {t.emUso && "≈ "}
-                  <b>{reais(t.valorUso)}</b>
-                  <span className="text-sm text-muted-foreground"> ({reais(Number(a.valor_hora))}/hora)</span>
-                </p>
-                {t.emUso && (
-                  <form action={encerrarAtendimento}>
-                    <input type="hidden" name="id" value={a.id} />
-                    <Button type="submit">Encerrar agora</Button>
-                  </form>
+                {t.emUso ? (
+                  <>
+                    <UsoAoVivo inicio={a.inicio} fimPrevisto={a.fim_previsto} valorHora={Number(a.valor_hora)} detalhado />
+                    <p className="text-sm text-muted-foreground">
+                      Início {hhmm(a.inicio)} · {a.fim_previsto ? `combinado até ${hhmm(a.fim_previsto)}` : "tempo livre"} ·{" "}
+                      {reais(Number(a.valor_hora))}/hora
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <form action={encerrarAtendimento}>
+                        <input type="hidden" name="id" value={a.id} />
+                        <Button type="submit">Encerrar agora</Button>
+                      </form>
+                      {[
+                        ["30", "+30 min"],
+                        ["60", "+1h"],
+                        ["livre", "Tempo livre"],
+                      ].map(([m, rotulo]) => (
+                        <form key={m} action={estenderTempo}>
+                          <input type="hidden" name="id" value={a.id} />
+                          <input type="hidden" name="minutos" value={m} />
+                          <Button type="submit" variant="outline">
+                            {rotulo}
+                          </Button>
+                        </form>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-lg">
+                      {hhmm(a.inicio)} → {hhmm(a.fim)} · <b>{duracao(t.minutos)}</b> · <b>{reais(t.valorUso)}</b>
+                      <span className="text-sm text-muted-foreground"> ({reais(Number(a.valor_hora))}/hora)</span>
+                    </p>
+                    <form action={reabrirTempo}>
+                      <input type="hidden" name="id" value={a.id} />
+                      <Button type="submit" variant="ghost" size="sm">
+                        Reabrir tempo
+                      </Button>
+                    </form>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -150,11 +191,12 @@ async function Conteudo({ params }: { params: Params }) {
                 id={a.id}
                 data={a.data}
                 nome={a.nome}
-                equipamentoId={a.equipamento_id ?? ""}
+                modo={a.inicio ? (a.equipamento_id ?? "livre") : ""}
+                emUso={t.emUso}
                 inicio={hhmm(a.inicio)}
+                fimPrevisto={hhmm(a.fim_previsto)}
                 fim={hhmm(a.fim)}
                 valorHora={String(a.valor_hora).replace(".", ",")}
-                valorUso={String(a.valor_uso).replace(".", ",")}
                 observacao={a.observacao ?? ""}
                 equipamentos={equips.data ?? []}
               />
@@ -172,6 +214,12 @@ async function Conteudo({ params }: { params: Params }) {
               <dl className="space-y-1 text-sm">
                 <Linha rotulo={t.emUso ? "Uso (até agora)" : "Uso"} valor={reais(t.valorUso)} />
                 <Linha rotulo="Consumo" valor={reais(t.consumo)} />
+                {t.ajuste !== 0 && (
+                  <Linha
+                    rotulo={`${t.ajuste < 0 ? "Desconto" : "Acréscimo"}${a.ajuste_motivo && a.ajuste_motivo !== "Desconto" ? ` (${a.ajuste_motivo})` : ""}`}
+                    valor={`${t.ajuste < 0 ? "−" : "+"} ${reais(Math.abs(t.ajuste))}`}
+                  />
+                )}
                 <Linha rotulo="Total" valor={reais(t.total)} forte />
                 <Linha rotulo="Pago" valor={reais(t.pago)} />
               </dl>
@@ -180,6 +228,9 @@ async function Conteudo({ params }: { params: Params }) {
                 <p className="font-display text-2xl font-bold">{reais(Math.abs(t.falta))}</p>
               </div>
               {t.emUso && <p className="text-xs text-muted-foreground">Ainda em uso: encerre antes de receber o valor final.</p>}
+              {!t.emUso && (
+                <AjustarValor id={a.id} calculado={t.valorUso + t.consumo} total={t.total} temAjuste={t.ajuste !== 0} />
+              )}
               <Receber atendimentoId={a.id} falta={t.falta} saldoMinutos={saldoMinutos} />
 
               {a.pagamentos.length > 0 && (

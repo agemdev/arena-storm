@@ -6,6 +6,7 @@ import { sair } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
 import { perfilArena } from "@/lib/perfil";
 import Marca from "@/components/Marca";
+import AlertasTempo from "@/components/painel/AlertasTempo";
 
 export const metadata: Metadata = { title: "Painel – Arena Storm", robots: { index: false } };
 
@@ -34,6 +35,8 @@ export default function PainelLayout({ children }: LayoutProps<"/painel">) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+      {/* Avisos de tempo acabando (em todas as telas do painel) */}
+      <AlertasTempo />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { DURACOES, somarMinutosHora } from "@/lib/caixa";
 
 export type ClienteOpcao = { id: string; nome: string; whatsapp: string };
 export type EquipOpcao = { id: string; nome: string; emUso: boolean };
@@ -35,7 +36,10 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
   const [busca, setBusca] = useState("");
   const [cliente, setCliente] = useState<ClienteOpcao | null>(null);
   const [aberto, setAberto] = useState(false);
-  const [equip, setEquip] = useState("");
+  const [equip, setEquip] = useState("livre"); // livre = tempo sem máquina fixa
+  const [ini, setIni] = useState(agora);
+  const [prev, setPrev] = useState(""); // fim previsto (vazio = tempo livre)
+  const comTempo = equip !== "";
 
   // Até 8 clientes que batem com o nome ou número digitado
   const sugestoes = useMemo(() => {
@@ -50,7 +54,7 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
   return (
     <form
       action={acao}
-      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_8rem_8rem_auto] lg:items-end"
+      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_7rem_7rem_6rem] lg:items-start"
     >
       <input type="hidden" name="data" value={data} />
       <input type="hidden" name="cliente_id" value={cliente?.id ?? ""} />
@@ -106,29 +110,69 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
       <div className="space-y-2">
         <Label htmlFor="equipamento_id">Máquina</Label>
         <NativeSelect id="equipamento_id" name="equipamento_id" value={equip} onChange={(e) => setEquip(e.target.value)}>
-          <option value="">Só consumo (sem máquina)</option>
+          <option value="livre">Livre (qualquer máquina)</option>
           {equipamentos.map((e) => (
             <option key={e.id} value={e.id} disabled={e.emUso}>
               {e.nome}
               {e.emUso ? " (em uso)" : ""}
             </option>
           ))}
+          <option value="">Só consumo (sem tempo)</option>
         </NativeSelect>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="inicio">Início</Label>
-        <Input id="inicio" name="inicio" type="time" defaultValue={agora} disabled={!equip} />
+        <Input id="inicio" name="inicio" type="time" value={ini} onChange={(e) => setIni(e.target.value)} disabled={!comTempo} />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="fim_previsto">Fim</Label>
+        <Input
+          id="fim_previsto"
+          name="fim_previsto"
+          type="time"
+          value={prev}
+          onChange={(e) => setPrev(e.target.value)}
+          disabled={!comTempo}
+          title="Vazio = tempo livre"
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="valor_hora">R$ / hora</Label>
-        <Input id="valor_hora" name="valor_hora" inputMode="decimal" defaultValue={valorHora} disabled={!equip} />
+        <Input id="valor_hora" name="valor_hora" inputMode="decimal" defaultValue={valorHora} disabled={!comTempo} />
       </div>
 
-      <Button type="submit" disabled={enviando} className="h-8">
-        {enviando ? "Abrindo..." : equip ? "Iniciar" : "Lançar consumo"}
-      </Button>
+      {/* Atalhos de duração: preenchem o Fim a partir do Início */}
+      {comTempo && (
+        <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-5">
+          <span className="text-xs text-muted-foreground">Quanto tempo?</span>
+          {DURACOES.map((d) => (
+            <button
+              key={d.min}
+              type="button"
+              onClick={() => setPrev(somarMinutosHora(ini, d.min))}
+              className="rounded-full border border-border px-3 py-1 text-xs hover:bg-accent"
+            >
+              {d.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setPrev("")}
+            className={`rounded-full border px-3 py-1 text-xs hover:bg-accent ${prev ? "border-border" : "border-purple text-purple"}`}
+          >
+            Livre (sem hora para acabar)
+          </button>
+        </div>
+      )}
+
+      <div className="sm:col-span-2 lg:col-span-5">
+        <Button type="submit" disabled={enviando}>
+          {enviando ? "Abrindo..." : comTempo ? "Iniciar tempo" : "Lançar consumo"}
+        </Button>
+      </div>
 
       {res && <p className={`text-sm sm:col-span-2 lg:col-span-5 ${res.ok ? "text-green" : "text-destructive"}`}>{res.msg}</p>}
     </form>
