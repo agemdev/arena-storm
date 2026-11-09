@@ -39,7 +39,7 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 ## Milestones
 - [x] M0 Setup (GitHub, Supabase, Vercel)
 - [x] M1 Site institucional
-- [ ] M2 Login admin + cadastro clientes (balcão)
+- [x] M2 Login admin + cadastro clientes (balcão) + Configurações (perfil, horários, preços)
 - [ ] M3 Agendamentos (reserva, corujão, campeonato, aniversário)
 - [ ] M4 Caixa/consumo + Banco de Minutos
 - [ ] M5 Painel de máquinas (realtime)
@@ -48,7 +48,7 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 - [ ] M8 SaaS multi-arena
 
 ## Status
-Milestone atual: M1 (dados e visual da arena em `ARENA-INFO.md`)
+Milestone atual: definindo próximo (M3 ou M4). Dados da arena: painel → Configurações (banco); textos fixos em `src/lib/arena.ts`.
 Repo: https://github.com/agemdev/arena-storm
 Site: https://arena-storm.vercel.app (Vercel equipe `agemdev`) · Supabase: projeto `fwjwowvblkukqroyqoca` (sa-east-1)
 Migrations: `supabase/migrations/` (aplicar via conector Supabase)
