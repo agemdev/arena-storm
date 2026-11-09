@@ -66,6 +66,11 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
   }
   const { data, error } = await consulta;
   const clientes = data as unknown as Linha[] | null;
+  // Saldo do Banco de Minutos de cada cliente da lista
+  const { data: saldos } = clientes?.length
+    ? await supabase.from("minutos_saldos").select("cliente_id, saldo").in("cliente_id", clientes.map((c) => c.id))
+    : { data: [] };
+  const saldoDe = new Map((saldos ?? []).map((s) => [s.cliente_id, s.saldo]));
 
   return (
     <Card>
@@ -85,6 +90,7 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
                 <TableHead>Nome</TableHead>
                 <TableHead>WhatsApp</TableHead>
                 <TableHead className="hidden md:table-cell">Cidade</TableHead>
+                <TableHead className="text-right">Minutos</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>
@@ -105,6 +111,7 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {c.cidades ? `${c.cidades.nome}-${c.cidades.uf}` : "—"}
                   </TableCell>
+                  <TableCell className="text-right font-medium text-cyan">{saldoDe.get(c.id) ?? 0}</TableCell>
                   <TableCell>
                     <Link href={`/painel/clientes/${c.id}`} className="text-sm text-muted-foreground hover:text-foreground">
                       Editar

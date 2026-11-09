@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Clock, Tag } from "lucide-react";
+import { Building2, Clock, Monitor, ShoppingBasket, Tag } from "lucide-react";
 
 // Itens da barra lateral. Nova página de configuração? Adicione aqui.
 const ITENS = [
   { href: "/painel/configuracoes/perfil", label: "Perfil da arena", icone: Building2 },
   { href: "/painel/configuracoes/horarios", label: "Horários", icone: Clock },
   { href: "/painel/configuracoes/precos", label: "Preços e pacotes", icone: Tag },
+  { href: "/painel/configuracoes/equipamentos", label: "Equipamentos", icone: Monitor },
+  { href: "/painel/configuracoes/produtos", label: "Produtos", icone: ShoppingBasket },
 ];
 
 // Barra lateral no computador; abas roláveis no celular

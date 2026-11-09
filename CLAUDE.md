@@ -48,7 +48,7 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 - [ ] M8 SaaS multi-arena
 
 ## Status
-Milestone atual: definindo próximo (M3 ou M4). Dados da arena: painel → Configurações (banco); textos fixos em `src/lib/arena.ts`.
+Milestone atual: M4 Caixa + Banco de Minutos (feito antes do M3, a pedido do dono). Dados da arena: painel → Configurações (banco); textos fixos em `src/lib/arena.ts`.
 Repo: https://github.com/agemdev/arena-storm
 Site: https://arena-storm.vercel.app (Vercel equipe `agemdev`) · Supabase: projeto `fwjwowvblkukqroyqoca` (sa-east-1)
 Migrations: `supabase/migrations/` (aplicar via conector Supabase)
