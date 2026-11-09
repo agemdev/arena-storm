@@ -2,26 +2,27 @@
 > Fonte: https://arenastorm-bot.vercel.app (lido em 09/11/2026). Itens com ⚠️ = confirmar com o dono.
 
 ## Dados
-- Nome: ArenaStorm · Arena gamer · Tianguá-CE
-- Endereço: Rua Manoel Estevão, 210 — Centro, Tianguá-CE ⚠️
+- Nome: Arena Storm · Game Center · Tianguá-CE
+- Endereço: Rua Manoel Estevão, 210 — Centro, Tianguá-CE
 - WhatsApp: https://wa.me/5588992320187
-- Horários: Seg–Sex 12h–23h · Sáb 10h–00h · Dom 14h–22h ⚠️
-- Estrutura: 12 PCs (RTX 4060, i7 13ª, 32GB, monitores 144Hz/240 FPS), 2 PS5 + simulador (volante Thrustmaster) ⚠️
-- Periféricos inclusos; ar-condicionado; lanches e bebidas; espaço para grupos; estacionamento na porta ⚠️
-- Jogos: CS2, Valorant, FC 26, Fortnite, GTA V, LoL, Rocket League, CoD, Free Fire, exclusivos PS5
+- Horários: Seg–Sex 9h–22h · Sáb 9h–23h · Dom 14h–23h
+- Estrutura: 10 PCs (ADM RYZEN, VGA AMD/NVIDIA 8GB, RAM 32GB, Monitores 180Hz/240 FPS), 4 PlayStation 5, 1 Nintendo Switch, 1 PC com Simulador de Corrida (G29), 1 Óculos de Realidade Virtual (VR)
+- Periféricos inclusos; ar-condicionado; lanches e bebidas; espaço para grupos; estacionamento na porta.
+- Jogos: Counter-Strike 2, Valorant, FC 26, Fortnite, GTA V e VI, League of Legends, Rocket League, Call of Duty, Free Fire, exclusivos PS5
 
-## Preços ⚠️
+## Preços
 | Plano | Valor | Detalhes |
 |---|---|---|
-| Hora avulsa | R$ 10/h | qualquer setup |
-| Passaporte 5h | R$ 38 | prioridade de setup, refri incluso, sorteios |
-| Corujão | R$ 50/noite | 00h–06h, arena inteira, lanches da madrugada |
-| Aniversário P | R$ 350 | até 10 pessoas, 3h |
-| Aniversário G | R$ 600 | até 15 pessoas, 5h + bônus |
+| Hora avulsa | R$ 12/h | qualquer setup |
+| VR 30min | R$ 10 | apenas para uso standalone (apenas óculos virtual) |
+| Passaporte 5h | R$ 50 | prioridade de setup, sorteios |
+| Corujão | R$ 70/noite | 22h–06h, arena inteira, lanches da madrugada |
+| Aniversário P | R$ 699 | até 10 pessoas, 3h |
+| Aniversário G | R$ 999 | até 15 pessoas, 3h + bônus |
 | Pacote 3h / grupo | sob consulta | via WhatsApp |
 
-## Conteúdo de exemplo (não usar como real) ⚠️
-- Torneios (CS2 05/set, FC 26 12/set, Valorant 19/set) → no M3 virão do banco.
+## Conteúdo de exemplo (não usar como real)
+- Torneios (Counter-Strike 2 dia 16 e 17 de jan/27, FC 26 dia 20 de dez/26, Valorant 19/set) → no M3 virão do banco.
 - Depoimentos (Kaique, Juliana, Matheus) → só usar se forem reais.
 - Chat "Storm" do site antigo → aqui vira botão WhatsApp (sem chatbot).
 
