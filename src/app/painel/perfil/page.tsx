@@ -2,12 +2,8 @@ import { Suspense } from "react";
 import { exigirAdmin, CIDADE_PADRAO } from "@/lib/auth";
 import { listarCidadesDoEstado, listarEstados } from "@/lib/locais";
 import { Card, CardContent } from "@/components/ui/card";
+import { urlLogo } from "@/lib/perfil";
 import PerfilForm from "./PerfilForm";
-
-// Endereço público do logotipo no Supabase Storage
-function urlLogo(caminho: string | null) {
-  return caminho ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logos/${caminho}` : null;
-}
 
 // Perfil da arena: dados da empresa, contato, endereço e logo
 export default function PerfilPage() {

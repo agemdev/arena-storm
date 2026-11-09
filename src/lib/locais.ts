@@ -1,17 +1,11 @@
 import "server-only";
 import { cacheLife } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
+import { supabasePublico } from "@/lib/supabase/publico";
 
 export type Estado = { uf: string; nome: string };
 export type Cidade = { id: number; nome: string };
 
-// Estados e cidades não mudam: lê sem login e guarda em cache
-function supabasePublico() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
-    auth: { persistSession: false },
-  });
-}
-
+// Estados e cidades não mudam: guarda em cache
 export async function listarEstados(): Promise<Estado[]> {
   "use cache";
   cacheLife("max");

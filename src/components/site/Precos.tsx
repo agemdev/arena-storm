@@ -1,38 +1,40 @@
 import { FESTAS, PLANOS, wa } from "@/lib/arena";
 import Titulo from "./Titulo";
+import { perfilArena } from "@/lib/perfil";
 
 // Tabela de preços. Todo botão abre o WhatsApp.
-export default function Precos() {
+export default async function Precos() {
+  const p = await perfilArena();
   return (
     <section id="precos" className="scroll-mt-20 bg-elevated py-20">
       <div className="mx-auto max-w-6xl px-4">
         <Titulo tag="💰 Valores" titulo="Planos pra todo estilo de jogo" texto="Escolha o plano e reserve pelo WhatsApp." />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {PLANOS.map((p) => (
+          {PLANOS.map((plano) => (
             <div
-              key={p.nome}
-              className={`flex flex-col rounded-2xl bg-card p-6 ${p.destaque ? "glow" : "border border-white/5"}`}
+              key={plano.nome}
+              className={`flex flex-col rounded-2xl bg-card p-6 ${plano.destaque ? "glow" : "border border-white/5"}`}
             >
-              {p.destaque && (
+              {plano.destaque && (
                 <span className="mb-3 w-fit rounded-full bg-purple-strong/20 px-3 py-1 text-xs font-semibold text-purple">
                   Mais pedido
                 </span>
               )}
-              <h3 className="font-display text-lg font-bold">{p.nome}</h3>
+              <h3 className="font-display text-lg font-bold">{plano.nome}</h3>
               <p className="mt-3">
-                <span className="font-display text-4xl font-bold">{p.preco}</span>
-                <span className="text-sm text-dim">{p.unidade}</span>
+                <span className="font-display text-4xl font-bold">{plano.preco}</span>
+                <span className="text-sm text-dim">{plano.unidade}</span>
               </p>
               <ul className="mt-5 flex-1 space-y-2 text-sm text-muted-foreground">
-                {p.itens.map((i) => (
+                {plano.itens.map((i) => (
                   <li key={i}>✓ {i}</li>
                 ))}
               </ul>
               <a
-                href={wa(`Olá! Quero reservar o plano ${p.nome} (${p.preco}).`)}
+                href={wa(p.whatsapp, `Olá! Quero reservar o plano ${plano.nome} (${plano.preco}).`)}
                 target="_blank"
                 rel="noopener"
-                className={`mt-6 rounded-xl py-2.5 text-center text-sm font-semibold ${p.destaque ? "btn-primary" : "border border-white/10 bg-white/5 hover:bg-white/10"}`}
+                className={`mt-6 rounded-xl py-2.5 text-center text-sm font-semibold ${plano.destaque ? "btn-primary" : "border border-white/10 bg-white/5 hover:bg-white/10"}`}
               >
                 Quero esse
               </a>
@@ -49,7 +51,7 @@ export default function Precos() {
           {FESTAS.map((f) => (
             <a
               key={f.nome}
-              href={wa(`Olá! Quero saber do pacote ${f.nome} (${f.preco}).`)}
+              href={wa(p.whatsapp, `Olá! Quero saber do pacote ${f.nome} (${f.preco}).`)}
               target="_blank"
               rel="noopener"
               className="rounded-xl bg-card px-5 py-3 hover:bg-card-hover"

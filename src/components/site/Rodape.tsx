@@ -1,7 +1,10 @@
-import { ENDERECO, wa } from "@/lib/arena";
+import { wa } from "@/lib/arena";
+import { perfilArena } from "@/lib/perfil";
+import Marca from "@/components/Marca";
 
 // Chamada final + rodapé + botão flutuante do WhatsApp
-export default function Rodape() {
+export default async function Rodape() {
+  const p = await perfilArena();
   return (
     <>
       <section className="hero-bg px-4 py-20 text-center">
@@ -10,7 +13,7 @@ export default function Rodape() {
         </h2>
         <p className="mt-3 text-muted-foreground">Sua máquina está a uma mensagem de distância.</p>
         <a
-          href={wa("Olá! Quero reservar um horário na Arena Storm.")}
+          href={wa(p.whatsapp, `Olá! Quero reservar um horário na ${p.nome}.`)}
           target="_blank"
           rel="noopener"
           className="btn-primary mt-8 inline-block rounded-xl px-8 py-3 font-semibold"
@@ -19,13 +22,14 @@ export default function Rodape() {
         </a>
       </section>
 
-      <footer className="border-t border-white/5 px-4 py-8 text-center text-sm text-dim">
-        <p>Arena Storm · Game Center · {ENDERECO}</p>
-        <p className="mt-1">© Arena Storm. Todos os direitos reservados.</p>
+      <footer className="flex flex-col items-center gap-3 border-t border-white/5 px-4 py-8 text-center text-sm text-dim">
+        <Marca nome={p.nome} logoUrl={p.logoUrl} tamanho={48} />
+        <p>{p.endereco}</p>
+        <p>© {p.nome}. Todos os direitos reservados.</p>
       </footer>
 
       <a
-        href={wa()}
+        href={wa(p.whatsapp, `Olá! Vim pelo site da ${p.nome}.`)}
         target="_blank"
         rel="noopener"
         aria-label="Falar no WhatsApp"

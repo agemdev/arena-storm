@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Titulo from "./Titulo";
+import { perfilArena } from "@/lib/perfil";
 
 // Fotos em public/fotos (tiradas do perfil no Google)
 const FOTOS = [
@@ -13,7 +14,8 @@ const FOTOS = [
   { src: "festa", alt: "Arena decorada para festa de aniversário" },
 ];
 
-export default function Galeria() {
+export default async function Galeria() {
+  const { instagram } = await perfilArena();
   return (
     <section id="fotos" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-20">
       <Titulo tag="📸 Fotos" titulo="Por dentro da Arena" />
@@ -33,16 +35,18 @@ export default function Galeria() {
           </div>
         ))}
       </div>
-      <div className="mt-8 text-center">
-        <a
-          href="https://www.instagram.com/arena.storm/"
-          target="_blank"
-          rel="noopener"
-          className="inline-block rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-semibold hover:bg-white/10"
-        >
-          Ver mais no Instagram @arena.storm
-        </a>
-      </div>
+      {instagram && (
+        <div className="mt-8 text-center">
+          <a
+            href={`https://www.instagram.com/${instagram}/`}
+            target="_blank"
+            rel="noopener"
+            className="inline-block rounded-xl border border-white/10 bg-white/5 px-6 py-3 font-semibold hover:bg-white/10"
+          >
+            Ver mais no Instagram @{instagram}
+          </a>
+        </div>
+      )}
     </section>
   );
 }

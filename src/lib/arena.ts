@@ -1,13 +1,10 @@
-// Dados da Arena usados no site. Mudou preço/horário? Edite só aqui.
-
-export const WHATSAPP = "5588992320187";
+// Textos fixos do site (preços, horários, jogos...). Mudou? Edite aqui.
+// Nome, logo, endereço e contatos vêm do Perfil da arena no painel (src/lib/perfil.ts).
 
 // Link do WhatsApp com mensagem pronta
-export function wa(msg = "Olá! Vim pelo site da Arena Storm.") {
-  return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`;
+export function wa(numero: string, msg = "Olá! Vim pelo site.") {
+  return `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
 }
-
-export const ENDERECO = "Rua Manoel Estevão, 210 — Centro, Tianguá-CE";
 
 export const HORARIOS = [
   { dia: "Segunda a Sexta", hora: "9h — 22h" },

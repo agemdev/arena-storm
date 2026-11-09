@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { exigirAdmin } from "@/lib/auth";
 import { normalizarWhats } from "@/lib/whatsapp";
 
@@ -66,6 +66,7 @@ export async function salvarPerfil(_: Resultado, form: FormData): Promise<Result
 
   if (apagar) await supabase.storage.from("logos").remove([apagar]);
 
+  updateTag("arena"); // atualiza o site público e o topo do painel
   revalidatePath("/painel", "layout");
-  return { ok: true, msg: "Perfil salvo!" };
+  return { ok: true, msg: "Perfil salvo! O site já foi atualizado." };
 }

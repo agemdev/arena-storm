@@ -4,6 +4,8 @@ import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
 import { sair } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
+import { perfilArena } from "@/lib/perfil";
+import Marca from "@/components/Marca";
 
 export const metadata: Metadata = { title: "Painel – Arena Storm", robots: { index: false } };
 
@@ -13,8 +15,10 @@ export default function PainelLayout({ children }: LayoutProps<"/painel">) {
     <div className="min-h-screen">
       <header className="border-b border-border bg-elevated">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
-          <Link href="/painel" className="font-display font-bold">
-            ⚡ Arena <span className="text-cyan">Storm</span>
+          <Link href="/painel">
+            <Suspense fallback={<span className="font-display font-bold">Painel</span>}>
+              <MarcaArena />
+            </Suspense>
           </Link>
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/painel" className="hover:text-foreground">Início</Link>
@@ -31,6 +35,13 @@ export default function PainelLayout({ children }: LayoutProps<"/painel">) {
       <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
     </div>
   );
+}
+
+// Logo + nome da arena do admin logado
+async function MarcaArena() {
+  const { arenaId } = await exigirAdmin();
+  const p = await perfilArena(arenaId);
+  return <Marca nome={p.nome} logoUrl={p.logoUrl} tamanho={32} />;
 }
 
 async function Usuario() {

@@ -1,8 +1,10 @@
 import { TORNEIOS, wa } from "@/lib/arena";
 import Titulo from "./Titulo";
+import { perfilArena } from "@/lib/perfil";
 
 // Próximos campeonatos (fixos até o M3)
-export default function Torneios() {
+export default async function Torneios() {
+  const p = await perfilArena();
   return (
     <section id="torneios" className="mx-auto max-w-4xl scroll-mt-20 px-4 py-20">
       <Titulo tag="🏆 Campeonatos" titulo="Próximos torneios" texto="Inscreva sua crew e dispute com a comunidade." />
@@ -20,7 +22,7 @@ export default function Torneios() {
               <p className="text-sm text-muted-foreground">{t.texto}</p>
             </div>
             <a
-              href={wa(`Olá! Quero me inscrever no torneio ${t.titulo} (${t.texto}).`)}
+              href={wa(p.whatsapp, `Olá! Quero me inscrever no torneio ${t.titulo} (${t.texto}).`)}
               target="_blank"
               rel="noopener"
               className="hidden rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 sm:block"
