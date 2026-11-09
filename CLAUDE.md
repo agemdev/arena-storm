@@ -37,7 +37,7 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 - `git add . && git commit -m "msg" && git push` → backup + deploy automático Vercel
 
 ## Milestones
-- [ ] M0 Setup (GitHub, Supabase, Vercel)
+- [x] M0 Setup (GitHub, Supabase, Vercel)
 - [ ] M1 Site institucional
 - [ ] M2 Login admin + cadastro clientes (balcão)
 - [ ] M3 Agendamentos (reserva, corujão, campeonato, aniversário)
@@ -48,4 +48,5 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 - [ ] M8 SaaS multi-arena
 
 ## Status
-Milestone atual: M0
+Milestone atual: M1 (dados e visual da arena em `ARENA-INFO.md`)
+Repo: https://github.com/agemdev/arena-storm
