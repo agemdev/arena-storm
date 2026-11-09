@@ -1,12 +1,37 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-/* Cores e fontes da Arena Storm (ver ARENA-INFO.md) */
+@custom-variant dark (&:is(.dark *));
+
+/* Cores e fontes da Arena Storm (ver ARENA-INFO.md). Tema único: escuro neon. */
+:root {
+  --background: #08080f;
+  --foreground: #f1f5f9;
+  --card: #12121f;
+  --card-foreground: #f1f5f9;
+  --popover: #12121f;
+  --popover-foreground: #f1f5f9;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #1c1c2e;
+  --secondary-foreground: #f1f5f9;
+  --muted: #1c1c2e;
+  --muted-foreground: #a1aab9;
+  --accent: #171728;
+  --accent-foreground: #f1f5f9;
+  --destructive: #f87171;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #a78bfa;
+  --radius: 0.75rem;
+}
+
 @theme inline {
+  /* Cores próprias do site */
   --color-bg: #08080f;
   --color-elevated: #0e0e1a;
-  --color-card: #12121f;
   --color-card-hover: #171728;
-  --color-input: #1c1c2e;
   --color-purple: #a78bfa;
   --color-purple-strong: #8b5cf6;
   --color-purple-dark: #6d28d9;
@@ -16,19 +41,49 @@
   --color-amber: #fbbf24;
   --color-green: #34d399;
   --color-text: #f1f5f9;
-  --color-muted: #a1aab9;
   --color-dim: #7d8698;
   --font-sans: var(--font-inter), "Segoe UI", system-ui, sans-serif;
   --font-display: var(--font-space), "Segoe UI", system-ui, sans-serif;
+  --font-heading: var(--font-space), "Segoe UI", system-ui, sans-serif;
+
+  /* Cores do shadcn/ui (componentes do painel) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  background: var(--color-bg);
-  color: var(--color-text);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
 }
 
 /* Texto com gradiente neon */

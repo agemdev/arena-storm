@@ -23,7 +23,7 @@ export default function Precos() {
                 <span className="font-display text-4xl font-bold">{p.preco}</span>
                 <span className="text-sm text-dim">{p.unidade}</span>
               </p>
-              <ul className="mt-5 flex-1 space-y-2 text-sm text-muted">
+              <ul className="mt-5 flex-1 space-y-2 text-sm text-muted-foreground">
                 {p.itens.map((i) => (
                   <li key={i}>✓ {i}</li>
                 ))}
@@ -44,7 +44,7 @@ export default function Precos() {
         <div className="mt-6 grid gap-4 rounded-2xl border border-pink/20 bg-pink/5 p-6 md:grid-cols-[1fr_auto_auto] md:items-center">
           <div>
             <h3 className="font-display text-lg font-bold">🎂 Festa de aniversário</h3>
-            <p className="mt-1 text-sm text-muted">Pacotes de grupo e de 3h também sob consulta.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Pacotes de grupo e de 3h também sob consulta.</p>
           </div>
           {FESTAS.map((f) => (
             <a
@@ -55,7 +55,7 @@ export default function Precos() {
               className="rounded-xl bg-card px-5 py-3 hover:bg-card-hover"
             >
               <span className="block font-display text-xl font-bold">{f.preco}</span>
-              <span className="text-xs text-muted">{f.texto}</span>
+              <span className="text-xs text-muted-foreground">{f.texto}</span>
             </a>
           ))}
         </div>

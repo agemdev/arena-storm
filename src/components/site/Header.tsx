@@ -17,7 +17,7 @@ export default function Header() {
           <span className="btn-primary grid h-8 w-8 place-items-center rounded-lg text-sm">⚡</span>
           Arena <span className="text-cyan">Storm</span>
         </a>
-        <nav className="hidden gap-6 text-sm text-muted md:flex">
+        <nav className="hidden gap-6 text-sm text-muted-foreground md:flex">
           {LINKS.map((l) => (
             <a key={l.href} href={l.href} className="hover:text-text">
               {l.label}

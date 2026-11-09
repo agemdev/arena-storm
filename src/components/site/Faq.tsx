@@ -13,7 +13,7 @@ export default function Faq() {
               {f.p}
               <span className="text-purple transition group-open:rotate-45">+</span>
             </summary>
-            <p className="mt-3 text-sm text-muted">{f.r}</p>
+            <p className="mt-3 text-sm text-muted-foreground">{f.r}</p>
           </details>
         ))}
       </div>

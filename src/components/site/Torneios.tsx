@@ -17,7 +17,7 @@ export default function Torneios() {
             </div>
             <div className="flex-1">
               <h3 className="font-display text-lg font-bold">{t.titulo}</h3>
-              <p className="text-sm text-muted">{t.texto}</p>
+              <p className="text-sm text-muted-foreground">{t.texto}</p>
             </div>
             <a
               href={wa(`Olá! Quero me inscrever no torneio ${t.titulo} (${t.texto}).`)}

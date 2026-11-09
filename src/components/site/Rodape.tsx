@@ -8,7 +8,7 @@ export default function Rodape() {
         <h2 className="font-display text-3xl font-bold sm:text-4xl">
           Bora dominar o <span className="text-gradient">lobby</span>?
         </h2>
-        <p className="mt-3 text-muted">Sua máquina está a uma mensagem de distância.</p>
+        <p className="mt-3 text-muted-foreground">Sua máquina está a uma mensagem de distância.</p>
         <a
           href={wa("Olá! Quero reservar um horário na Arena Storm.")}
           target="_blank"

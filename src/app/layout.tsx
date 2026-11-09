@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="pt-BR" className={`${inter.variable} ${space.variable} antialiased`}>
-      <body className="min-h-screen font-sans">{children}</body>
+      <body className="min-h-screen">{children}</body>
     </html>
   );
 }

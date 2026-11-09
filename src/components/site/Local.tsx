@@ -21,12 +21,12 @@ export default function Local() {
             <ul className="mt-2 space-y-2 text-sm">
               {HORARIOS.map((h) => (
                 <li key={h.dia} className="flex justify-between">
-                  <span className="text-muted">{h.dia}</span>
+                  <span className="text-muted-foreground">{h.dia}</span>
                   <span className="font-semibold">{h.hora}</span>
                 </li>
               ))}
             </ul>
-            <ul className="mt-6 grid grid-cols-2 gap-2 text-sm text-muted">
+            <ul className="mt-6 grid grid-cols-2 gap-2 text-sm text-muted-foreground">
               <li>❄️ Climatizado</li>
               <li>🍔 Lanches e bebidas</li>
               <li>👨‍👩‍👧 Espaço pra grupos</li>

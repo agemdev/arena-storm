@@ -12,7 +12,7 @@ export default function Hero() {
           <h1 className="mt-5 font-display text-4xl leading-tight font-bold sm:text-6xl">
             O melhor <span className="text-gradient">lobby gamer</span> da região
           </h1>
-          <p className="mt-5 max-w-lg text-muted">
+          <p className="mt-5 max-w-lg text-muted-foreground">
             PCs gamer, PlayStation 5, simulador de corrida, realidade virtual e um espaço completo pra você e sua crew.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
@@ -43,12 +43,12 @@ export default function Hero() {
           <ul className="mt-4 divide-y divide-white/5">
             {HORARIOS.map((h) => (
               <li key={h.dia} className="flex justify-between py-3 text-sm">
-                <span className="text-muted">{h.dia}</span>
+                <span className="text-muted-foreground">{h.dia}</span>
                 <span className="font-semibold">{h.hora}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-4 rounded-xl bg-purple-strong/10 p-4 text-sm text-muted">
+          <p className="mt-4 rounded-xl bg-purple-strong/10 p-4 text-sm text-muted-foreground">
             🌙 <b className="text-text">Corujão</b> das 22h às 6h. Reserve com antecedência!
           </p>
         </div>

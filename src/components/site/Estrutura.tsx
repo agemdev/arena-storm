@@ -15,7 +15,7 @@ export default function Estrutura() {
           <div key={e.titulo} className="rounded-2xl border border-white/5 bg-card p-6 transition hover:bg-card-hover">
             <div className="text-3xl">{e.icone}</div>
             <h3 className="mt-4 font-display text-lg font-bold">{e.titulo}</h3>
-            <p className="mt-2 text-sm text-muted">{e.texto}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{e.texto}</p>
           </div>
         ))}
       </div>
