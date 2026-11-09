@@ -1,5 +1,5 @@
 -- M2: arenas, membros (admins) e clientes
--- Como usar: Supabase → SQL Editor → New query → colar tudo → Run.
+-- Já aplicado no Supabase (via conector) em 09/11/2026.
 
 -- 1) Arenas (cada arena do SaaS)
 create table public.arenas (
@@ -39,13 +39,15 @@ end $$;
 create trigger clientes_atualizado_em before update on public.clientes
   for each row execute function public.tocar_atualizado_em();
 
--- Arenas do usuário logado (security definer evita loop no RLS)
-create function public.minhas_arenas() returns setof uuid
+-- Arenas do usuário logado (security definer evita loop no RLS; schema privado fica fora da API)
+create schema if not exists privado;
+grant usage on schema privado to authenticated;
+create function privado.minhas_arenas() returns setof uuid
 language sql stable security definer set search_path = '' as $$
   select arena_id from public.membros where user_id = (select auth.uid())
 $$;
-revoke execute on function public.minhas_arenas() from public, anon;
-grant execute on function public.minhas_arenas() to authenticated;
+revoke execute on function privado.minhas_arenas() from public, anon;
+grant execute on function privado.minhas_arenas() to authenticated;
 
 -- RLS: cada admin só vê a própria arena
 alter table public.arenas enable row level security;
@@ -53,18 +55,18 @@ alter table public.membros enable row level security;
 alter table public.clientes enable row level security;
 
 create policy "ver minha arena" on public.arenas for select to authenticated
-  using (id in (select public.minhas_arenas()));
+  using (id in (select privado.minhas_arenas()));
 
 create policy "ver meu vínculo" on public.membros for select to authenticated
   using (user_id = (select auth.uid()));
 
 create policy "ver clientes" on public.clientes for select to authenticated
-  using (arena_id in (select public.minhas_arenas()));
+  using (arena_id in (select privado.minhas_arenas()));
 create policy "cadastrar clientes" on public.clientes for insert to authenticated
-  with check (arena_id in (select public.minhas_arenas()));
+  with check (arena_id in (select privado.minhas_arenas()));
 create policy "editar clientes" on public.clientes for update to authenticated
-  using (arena_id in (select public.minhas_arenas()))
-  with check (arena_id in (select public.minhas_arenas()));
+  using (arena_id in (select privado.minhas_arenas()))
+  with check (arena_id in (select privado.minhas_arenas()));
 -- Sem exclusão por enquanto: cliente terá histórico (caixa, minutos).
 
 -- 4) Cria a Arena Storm
