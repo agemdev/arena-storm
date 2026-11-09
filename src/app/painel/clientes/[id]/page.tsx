@@ -2,9 +2,11 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigirAdmin } from "@/lib/auth";
-import { formatarWhats } from "@/lib/whatsapp";
+import { listarCidadesDoEstado, listarEstados } from "@/lib/locais";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ClienteForm from "../ClienteForm";
+
+type Params = PageProps<"/painel/clientes/[id]">["params"];
 
 // Editar um cliente
 export default function EditarCliente({ params }: PageProps<"/painel/clientes/[id]">) {
@@ -20,11 +22,21 @@ export default function EditarCliente({ params }: PageProps<"/painel/clientes/[i
   );
 }
 
-async function Formulario({ params }: { params: PageProps<"/painel/clientes/[id]">["params"] }) {
+async function Formulario({ params }: { params: Params }) {
   const { id } = await params;
-  const { supabase } = await exigirAdmin();
-  const { data: c } = await supabase.from("clientes").select("id, nome, whatsapp").eq("id", id).maybeSingle();
-  if (!c) notFound();
+  const { supabase, cidadePadrao } = await exigirAdmin();
+  const { data } = await supabase
+    .from("clientes")
+    .select("id, nome, whatsapp, descricao, cidade_id, cidades(uf)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) notFound();
+
+  const c = data as unknown as typeof data & { cidades: { uf: string } | null };
+  // Cliente antigo sem cidade → usa a cidade padrão da arena
+  const uf = c.cidades?.uf ?? cidadePadrao.uf;
+  const cidadeId = c.cidade_id ?? cidadePadrao.id;
+  const [estados, cidades] = await Promise.all([listarEstados(), listarCidadesDoEstado(uf)]);
 
   return (
     <Card>
@@ -32,7 +44,13 @@ async function Formulario({ params }: { params: PageProps<"/painel/clientes/[id]
         <CardTitle>Editar cliente</CardTitle>
       </CardHeader>
       <CardContent>
-        <ClienteForm cliente={{ ...c, whatsapp: formatarWhats(c.whatsapp) }} />
+        <ClienteForm
+          cliente={{ id: c.id, nome: c.nome, whatsapp: c.whatsapp.replace(/^55/, ""), descricao: c.descricao }}
+          estados={estados}
+          cidades={cidades}
+          uf={uf}
+          cidadeId={cidadeId}
+        />
       </CardContent>
     </Card>
   );

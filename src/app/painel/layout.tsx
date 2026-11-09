@@ -19,6 +19,7 @@ export default function PainelLayout({ children }: LayoutProps<"/painel">) {
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/painel" className="hover:text-foreground">Início</Link>
             <Link href="/painel/clientes" className="hover:text-foreground">Clientes</Link>
+            <Link href="/painel/perfil" className="hover:text-foreground">Perfil</Link>
           </nav>
           <div className="ml-auto">
             <Suspense>

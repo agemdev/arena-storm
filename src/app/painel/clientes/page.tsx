@@ -1,12 +1,15 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
+import { listarCidadesDoEstado, listarEstados } from "@/lib/locais";
 import { formatarWhats } from "@/lib/whatsapp";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import ClienteForm from "./ClienteForm";
+
+type Busca = PageProps<"/painel/clientes">["searchParams"];
 
 // Clientes: cadastro do balcão + lista com busca
 export default function ClientesPage({ searchParams }: PageProps<"/painel/clientes">) {
@@ -18,7 +21,9 @@ export default function ClientesPage({ searchParams }: PageProps<"/painel/client
           <CardTitle>Novo cliente</CardTitle>
         </CardHeader>
         <CardContent>
-          <ClienteForm />
+          <Suspense fallback={<p className="text-muted-foreground">Carregando...</p>}>
+            <NovoCliente />
+          </Suspense>
         </CardContent>
       </Card>
       <Suspense fallback={<p className="text-muted-foreground">Carregando clientes...</p>}>
@@ -28,26 +33,45 @@ export default function ClientesPage({ searchParams }: PageProps<"/painel/client
   );
 }
 
-async function Lista({ searchParams }: { searchParams: PageProps<"/painel/clientes">["searchParams"] }) {
+async function NovoCliente() {
+  const { cidadePadrao } = await exigirAdmin();
+  const [estados, cidades] = await Promise.all([listarEstados(), listarCidadesDoEstado(cidadePadrao.uf)]);
+  return <ClienteForm estados={estados} cidades={cidades} uf={cidadePadrao.uf} cidadeId={cidadePadrao.id} />;
+}
+
+type Linha = {
+  id: string;
+  nome: string;
+  whatsapp: string;
+  descricao: string | null;
+  cidades: { nome: string; uf: string } | null;
+};
+
+async function Lista({ searchParams }: { searchParams: Busca }) {
   const { supabase } = await exigirAdmin();
   const { q } = await searchParams;
   // Limpa a busca (tira símbolos que quebram o filtro)
   const busca = String(q ?? "").replace(/[^\p{L}\p{N} ]/gu, "").trim();
 
-  let consulta = supabase.from("clientes").select("id, nome, whatsapp").order("nome").limit(200);
+  let consulta = supabase
+    .from("clientes")
+    .select("id, nome, whatsapp, descricao, cidades(nome, uf)")
+    .order("nome")
+    .limit(200);
   if (busca) {
     const digitos = busca.replace(/\D/g, "");
-    consulta = consulta.or(
-      digitos.length >= 3 ? `nome.ilike.%${busca}%,whatsapp.ilike.%${digitos}%` : `nome.ilike.%${busca}%`,
-    );
+    const filtros = [`nome.ilike.%${busca}%`, `descricao.ilike.%${busca}%`];
+    if (digitos.length >= 3) filtros.push(`whatsapp.ilike.%${digitos}%`);
+    consulta = consulta.or(filtros.join(","));
   }
-  const { data: clientes, error } = await consulta;
+  const { data, error } = await consulta;
+  const clientes = data as unknown as Linha[] | null;
 
   return (
     <Card>
       <CardHeader>
         <form className="flex gap-2">
-          <Input name="q" defaultValue={busca} placeholder="Buscar por nome ou WhatsApp" />
+          <Input name="q" defaultValue={busca} placeholder="Buscar por nome, WhatsApp ou descrição" />
           <Button type="submit" variant="outline">Buscar</Button>
         </form>
       </CardHeader>
@@ -60,17 +84,26 @@ async function Lista({ searchParams }: { searchParams: PageProps<"/painel/client
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>WhatsApp</TableHead>
+                <TableHead className="hidden md:table-cell">Cidade</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {clientes.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.nome}</TableCell>
+                  <TableCell className="whitespace-normal">
+                    <span className="font-medium">{c.nome}</span>
+                    {c.descricao && (
+                      <span className="line-clamp-1 text-xs text-muted-foreground">{c.descricao}</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <a href={`https://wa.me/${c.whatsapp}`} target="_blank" rel="noopener" className="text-cyan hover:underline">
                       {formatarWhats(c.whatsapp)}
                     </a>
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                    {c.cidades ? `${c.cidades.nome}-${c.cidades.uf}` : "—"}
                   </TableCell>
                   <TableCell>
                     <Link href={`/painel/clientes/${c.id}`} className="text-sm text-muted-foreground hover:text-foreground">
