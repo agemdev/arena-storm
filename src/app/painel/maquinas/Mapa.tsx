@@ -31,6 +31,11 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
   const fora = maquinas.filter((m) => !m.mapa_x || !m.mapa_y);
   const colunas = Math.max(1, ...noMapa.map((m) => m.mapa_x!));
   const linhas = Math.max(1, ...noMapa.map((m) => m.mapa_y!));
+  // Colunas/linhas vazias viram só um corredor estreito → sobra espaço para os cartões
+  const usadasX = new Set(noMapa.map((m) => m.mapa_x));
+  const usadasY = new Set(noMapa.map((m) => m.mapa_y));
+  const gradeX = Array.from({ length: colunas }, (_, i) => (usadasX.has(i + 1) ? "minmax(7.5rem, 1fr)" : "1.5rem")).join(" ");
+  const gradeY = Array.from({ length: linhas }, (_, i) => (usadasY.has(i + 1) ? "minmax(7.5rem, auto)" : "1.5rem")).join(" ");
 
   const clicar = (m: MaquinaEstado) => {
     if (m.atendimento) iniciar(() => router.push(`/painel/maquinas?abrir=${m.atendimento!.id}`, { scroll: false }));
@@ -54,10 +59,7 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-card p-4">
-        <div
-          className="grid min-w-[880px] gap-2"
-          style={{ gridTemplateColumns: `repeat(${colunas}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${linhas}, minmax(7.5rem, auto))` }}
-        >
+        <div className="grid w-max min-w-full gap-2" style={{ gridTemplateColumns: gradeX, gridTemplateRows: gradeY }}>
           {noMapa.map((m) => (
             <div key={m.id} style={{ gridColumnStart: m.mapa_x!, gridRowStart: m.mapa_y! }}>
               <Cartao m={m} onClick={() => clicar(m)} />
@@ -136,7 +138,7 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
           ? "border-amber bg-amber/25"
           : "border-cyan bg-cyan/15 hover:bg-cyan/25";
     const uso = agora === null ? null : calcularUso(a.inicio, new Date(agora).toISOString(), a.valor_hora);
-    linha2 = <span className="truncate font-semibold">{a.nome}</span>;
+    linha2 = <span className="truncate text-sm font-semibold">{a.nome}</span>;
     linha3 = (
       <span className="text-xs">
         {uso ? `${duracao(uso.minutos)} · ${reais(uso.valor)}` : "…"}
@@ -151,12 +153,12 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
   }
 
   return (
-    <button type="button" onClick={onClick} className={`flex h-full min-h-[7.5rem] w-full flex-col items-start gap-1 rounded-xl border-2 p-3 text-left transition ${cor}`}>
-      <span className="flex w-full items-center gap-2">
-        <Icone className="size-5 shrink-0" />
-        <span className="font-display text-lg font-bold">{m.nome}</span>
+    <button type="button" onClick={onClick} className={`flex h-full min-h-[7.5rem] w-full min-w-0 flex-col items-start gap-1 overflow-hidden rounded-xl border-2 p-2.5 text-left transition ${cor}`}>
+      <span className="flex w-full items-start gap-1.5">
+        <Icone className="mt-0.5 size-4 shrink-0 opacity-80" />
+        <span className="line-clamp-2 text-sm leading-tight font-bold break-words">{m.nome}</span>
       </span>
-      <span className="flex w-full flex-col gap-0.5 text-sm">
+      <span className="flex w-full min-w-0 flex-col gap-0.5 text-sm">
         {linha2}
         {linha3}
       </span>
