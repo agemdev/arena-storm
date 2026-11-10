@@ -16,13 +16,14 @@ import {
   removerConsumo,
 } from "./actions";
 import Cancelar from "./Cancelar";
+import { clientesComSaldo } from "@/lib/caixa-servidor";
 import AjustarValor from "./[id]/AjustarValor";
 import EditarAtendimento from "./[id]/EditarAtendimento";
 import Receber from "./[id]/Receber";
 
 type Detalhe = Omit<AtendimentoLinha, "consumos" | "pagamentos"> & {
   consumos: { id: string; descricao: string; quantidade: number; valor_unit: number; total: number }[];
-  pagamentos: { id: string; forma: Forma; valor: number; criado_em: string }[];
+  pagamentos: { id: string; forma: Forma; valor: number; criado_em: string; clientes: { nome: string } | null }[];
 };
 
 // Janela flutuante de um atendimento: tempo, consumo, pagamento e correções
@@ -31,7 +32,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
   const { data } = await supabase
     .from("atendimentos")
     .select(
-      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em)",
+      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em, clientes(nome))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -46,14 +47,13 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
   const a = data as unknown as Detalhe;
   const t = totais(a);
 
-  const [produtos, equips, saldo] = await Promise.all([
+  const [produtos, equips, comSaldo] = await Promise.all([
     supabase.from("produtos").select("id, nome, preco").eq("ativo", true).order("ordem").order("nome"),
     supabase.from("equipamentos").select("id, nome").eq("ativo", true).order("ordem"),
-    a.cliente_id
-      ? supabase.from("minutos_saldos").select("saldo").eq("cliente_id", a.cliente_id).maybeSingle()
-      : Promise.resolve({ data: null }),
+    clientesComSaldo(supabase),
   ]);
-  const saldoMinutos = a.cliente_id ? (saldo.data?.saldo ?? 0) : null;
+  const saldoMinutos = a.cliente_id ? (comSaldo.find((c) => c.id === a.cliente_id)?.saldo ?? 0) : null;
+  const pagaCom = a.minutos_de ? (comSaldo.find((c) => c.id === a.minutos_de) ?? { nome: "cliente sem saldo", saldo: 0 }) : null;
 
   const titulo = (
     <div className="flex flex-wrap items-center gap-3">
@@ -104,6 +104,11 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                       Início {hhmm(a.inicio)} · {a.fim_previsto ? `combinado até ${hhmm(a.fim_previsto)}` : "tempo livre"} ·{" "}
                       {reais(Number(a.valor_hora))}/hora
                     </p>
+                    {pagaCom && (
+                      <p className="text-sm text-purple">
+                        ⏱ Paga com minutos de <b>{pagaCom.nome}</b> ({pagaCom.saldo} min): desconta sozinho ao encerrar.
+                      </p>
+                    )}
                     <div className="flex flex-wrap gap-2">
                       <form action={encerrarAtendimento}>
                         <input type="hidden" name="id" value={a.id} />
@@ -200,6 +205,9 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                   fim={hhmm(a.fim)}
                   valorHora={String(a.valor_hora).replace(".", ",")}
                   observacao={a.observacao ?? ""}
+                  minutosDe={a.minutos_de ?? ""}
+                  clienteId={a.cliente_id}
+                  comSaldo={comSaldo}
                   equipamentos={equips.data ?? []}
                 />
               </div>
@@ -229,14 +237,16 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                 </div>
                 {t.emUso && <p className="text-xs text-muted-foreground">Ainda em uso: encerre antes de receber o valor final.</p>}
                 {!t.emUso && <AjustarValor id={a.id} calculado={t.valorUso + t.consumo} total={t.total} temAjuste={t.ajuste !== 0} />}
-                <Receber atendimentoId={a.id} falta={t.falta} saldoMinutos={saldoMinutos} />
+                <Receber atendimentoId={a.id} falta={t.falta} clienteId={a.cliente_id} minutosDe={a.minutos_de} comSaldo={comSaldo} />
 
                 {a.pagamentos.length > 0 && (
                   <ul className="divide-y divide-border rounded-lg border border-border text-sm">
                     {a.pagamentos.map((p) => (
                       <li key={p.id} className="flex items-center gap-3 px-3 py-2">
                         <span className="flex-1">
-                          {FORMAS[p.forma]} <span className="text-muted-foreground">· {hhmm(p.criado_em)}</span>
+                          {FORMAS[p.forma]}
+                          {p.forma === "minutos" && p.clientes && <span className="text-purple"> de {p.clientes.nome}</span>}{" "}
+                          <span className="text-muted-foreground">· {hhmm(p.criado_em)}</span>
                         </span>
                         <span>{reais(Number(p.valor))}</span>
                         <form action={estornarPagamento}>

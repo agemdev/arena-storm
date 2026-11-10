@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { exigirAdmin } from "@/lib/auth";
 import { hojeISO } from "@/lib/caixa";
-import { encerrarVencidos, estadoMaquinas } from "@/lib/caixa-servidor";
+import { clientesComSaldo, encerrarVencidos, estadoMaquinas } from "@/lib/caixa-servidor";
 import AoVivo from "@/components/painel/AoVivo";
 import DetalheJanela from "../caixa/Detalhe";
 import Mapa from "./Mapa";
@@ -21,10 +21,11 @@ async function Maquinas({ searchParams }: { searchParams: PageProps<"/painel/maq
   const { abrir } = await searchParams;
   const abrirId = typeof abrir === "string" && /^[0-9a-f-]{36}$/.test(abrir) ? abrir : null;
 
-  const [{ maquinas, semMaquina }, clientes, plano] = await Promise.all([
+  const [{ maquinas, semMaquina }, clientes, plano, comSaldo] = await Promise.all([
     estadoMaquinas(supabase),
     supabase.from("clientes").select("id, nome, whatsapp").order("nome").limit(5000),
     supabase.from("planos").select("preco").eq("arena_id", arenaId).eq("unidade", "/hora").order("ordem").limit(1).maybeSingle(),
+    clientesComSaldo(supabase),
   ]);
 
   return (
@@ -40,6 +41,7 @@ async function Maquinas({ searchParams }: { searchParams: PageProps<"/painel/maq
         data={hojeISO()}
         valorHora={String(plano.data?.preco ?? 12).replace(".", ",")}
         clientes={clientes.data ?? []}
+        comSaldo={comSaldo}
       />
 
       <AoVivo />

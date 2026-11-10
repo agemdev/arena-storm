@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { pcLigado } from "@/lib/agentes";
-import { calcularUso, hhmm, hojeISO, SELECT_ATENDIMENTO, somarDias, totais, type AtendimentoLinha } from "@/lib/caixa";
+import { calcularUso, hhmm, hojeISO, SELECT_ATENDIMENTO, somarDias, totais, type AtendimentoLinha, type ComSaldo } from "@/lib/caixa";
 
 // Encerra os atendimentos cujo tempo combinado já acabou.
 // O fim fica exatamente no horário previsto (mesmo que ninguém estivesse com o painel aberto).
@@ -130,4 +130,16 @@ export async function estadoMaquinas(supabase: SupabaseClient) {
     .filter((a) => !a.equipamento_id)
     .map((a) => ({ id: a.id, nome: a.nome, inicio: a.inicio as string, fim_previsto: a.fim_previsto, valor_hora: Number(a.valor_hora) }));
   return { maquinas, semMaquina };
+}
+
+// Clientes com saldo de minutos (maior primeiro)
+export async function clientesComSaldo(supabase: SupabaseClient): Promise<ComSaldo[]> {
+  const { data: saldos } = await supabase.from("minutos_saldos").select("cliente_id, saldo").gt("saldo", 0);
+  const ids = (saldos ?? []).map((s) => s.cliente_id);
+  if (!ids.length) return [];
+  const { data: nomes } = await supabase.from("clientes").select("id, nome").in("id", ids);
+  const nome = new Map((nomes ?? []).map((c) => [c.id, c.nome]));
+  return (saldos ?? [])
+    .map((s) => ({ id: s.cliente_id as string, nome: nome.get(s.cliente_id) ?? "?", saldo: Number(s.saldo) }))
+    .sort((x, y) => y.saldo - x.saldo);
 }

@@ -33,3 +33,19 @@ export async function salvarCliente(_: Resultado, form: FormData): Promise<Resul
   if (id) redirect("/painel/clientes");
   return { ok: true, msg: `${nome} cadastrado!` };
 }
+
+// Promoção / ação: dá minutos grátis ao cliente (fica no extrato como "Promoção")
+export async function darMinutos(_: Resultado, form: FormData): Promise<Resultado> {
+  const { supabase, arenaId } = await exigirAdmin();
+  const clienteId = String(form.get("cliente_id"));
+  const minutos = Math.round(Number(String(form.get("minutos") ?? "").replace(",", ".")));
+  const obs = String(form.get("obs") ?? "").trim().slice(0, 120);
+  if (!(minutos >= 1 && minutos <= 10000)) return { ok: false, msg: "Digite de 1 a 10.000 minutos." };
+  if (obs.length < 3) return { ok: false, msg: "Escreva o motivo (ex.: sorteio do Instagram)." };
+  const { error } = await supabase
+    .from("minutos_lancamentos")
+    .insert({ arena_id: arenaId, cliente_id: clienteId, minutos, motivo: "promocao", obs });
+  if (error) return { ok: false, msg: "Erro ao dar os minutos." };
+  revalidatePath("/painel", "layout");
+  return { ok: true, msg: `+${minutos} min dados!` };
+}

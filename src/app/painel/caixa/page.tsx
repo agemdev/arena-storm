@@ -23,7 +23,7 @@ import Cancelar from "./Cancelar";
 import DetalheJanela from "./Detalhe";
 import LinhaClicavel from "./LinhaClicavel";
 import { encerrarAtendimento, estenderTempo } from "./actions";
-import { encerrarVencidos, estadoMaquinas } from "@/lib/caixa-servidor";
+import { clientesComSaldo, encerrarVencidos, estadoMaquinas } from "@/lib/caixa-servidor";
 import AoVivo from "@/components/painel/AoVivo";
 import UsoAoVivo from "@/components/painel/UsoAoVivo";
 
@@ -104,7 +104,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
   const atendimentos = (lista.data ?? []) as unknown as AtendimentoLinha[];
 
   // Máquinas: em uso, reserva próxima, TV dividida (avisos no "Novo atendimento")
-  const { maquinas } = await estadoMaquinas(supabase);
+  const [{ maquinas }, comSaldo] = await Promise.all([estadoMaquinas(supabase), clientesComSaldo(supabase)]);
 
   // Resumo do dia (cancelados não contam)
   const linhas = ordenar(
@@ -152,6 +152,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
             data={data}
             valorHora={String(plano.data?.preco ?? 12).replace(".", ",")}
             clientes={clientes.data ?? []}
+            comSaldo={comSaldo}
             equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv, bloqueio: m.situacao !== "normal" ? SITUACOES_MAQUINA[m.situacao].nome : undefined }))}
           />
         </div>

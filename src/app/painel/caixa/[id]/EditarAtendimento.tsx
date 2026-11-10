@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, Textarea } from "@/components/ui/native-select";
-import { calcularUso, duracao, DURACOES, lerValor, paraTimestamp, somarMinutosHora } from "@/lib/caixa";
+import { calcularUso, duracao, DURACOES, lerValor, paraTimestamp, somarMinutosHora, type ComSaldo } from "@/lib/caixa";
+import UsarMinutos from "@/components/painel/UsarMinutos";
 import { reais } from "@/lib/formatos";
 
 type Props = {
@@ -21,6 +22,9 @@ type Props = {
   valorHora: string;
   observacao: string;
   equipamentos: { id: string; nome: string }[];
+  minutosDe: string;
+  clienteId: string | null;
+  comSaldo: ComSaldo[];
 };
 
 // Corrigir dados a qualquer momento (mesmo em uso). O valor do uso é recalculado pelos horários.
@@ -31,6 +35,7 @@ export default function EditarAtendimento(p: Props) {
   const [prev, setPrev] = useState(p.fimPrevisto);
   const [fim, setFim] = useState(p.fim);
   const [vh, setVh] = useState(p.valorHora);
+  const [minDe, setMinDe] = useState(p.minutosDe);
   const comTempo = modo !== "";
   const encerrado = !p.emUso && !!p.fim;
 
@@ -108,6 +113,15 @@ export default function EditarAtendimento(p: Props) {
         </>
       )}
 
+      {comTempo && (
+        <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+          <Label htmlFor="e-min">Pagar com minutos de</Label>
+          <UsarMinutos id="e-min" comSaldo={p.comSaldo} name="minutos_de" value={minDe} onChange={setMinDe} primeiro={p.clienteId} />
+          <p className="text-xs text-muted-foreground">
+            {encerrado ? "Já encerrado: para cobrar agora, use Receber → Minutos." : "Ao encerrar, desconta sozinho até o saldo dar."}
+          </p>
+        </div>
+      )}
       <div className="space-y-2 sm:col-span-2 lg:col-span-4">
         <Label htmlFor="e-obs">Observação</Label>
         <Textarea id="e-obs" name="observacao" rows={2} maxLength={300} defaultValue={p.observacao} />

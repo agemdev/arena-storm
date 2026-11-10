@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import IconeMaquina from "@/components/painel/IconeMaquina";
 import Janela from "@/components/painel/Janela";
 import { useAgora } from "@/components/painel/UsoAoVivo";
-import { AVISO_MINUTOS, calcularUso, duracao, hhmm, minutosRestantes, SITUACOES_MAQUINA } from "@/lib/caixa";
+import { AVISO_MINUTOS, calcularUso, duracao, hhmm, minutosRestantes, SITUACOES_MAQUINA, type ComSaldo } from "@/lib/caixa";
 import { reais } from "@/lib/formatos";
 import type { MaquinaEstado } from "@/lib/caixa-servidor";
 import NovoAtendimento, { type ClienteOpcao } from "../caixa/NovoAtendimento";
@@ -19,10 +19,11 @@ type Props = {
   data: string;
   valorHora: string;
   clientes: ClienteOpcao[];
+  comSaldo: ComSaldo[];
 };
 
 // Mapa da arena: cada máquina no seu lugar, com a cor da situação
-export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }: Props) {
+export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes, comSaldo }: Props) {
   const router = useRouter();
   const [abrindo, iniciar] = useTransition();
   const [nova, setNova] = useState<{ equip: MaquinaEstado; agora: string } | null>(null);
@@ -147,6 +148,7 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
                 agora={nova.agora}
                 valorHora={valorHora}
                 clientes={clientes}
+                comSaldo={comSaldo}
                 equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv, bloqueio: m.situacao !== "normal" ? SITUACOES_MAQUINA[m.situacao].nome : undefined }))}
                 equipInicial={nova.equip.id}
                 onIniciado={fechar}

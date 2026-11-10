@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { DURACOES, somarMinutosHora } from "@/lib/caixa";
+import { DURACOES, somarMinutosHora, type ComSaldo } from "@/lib/caixa";
+import UsarMinutos from "@/components/painel/UsarMinutos";
 
 export type ClienteOpcao = { id: string; nome: string; whatsapp: string };
 export type EquipOpcao = { id: string; nome: string; emUso: boolean; reserva?: string; tv?: string; bloqueio?: string }; // reserva = "20:00"; tv = quem usa a TV dividida; bloqueio = "Manutenção"
@@ -19,6 +20,7 @@ type Props = {
   clientes: ClienteOpcao[];
   equipamentos: EquipOpcao[];
   equipInicial?: string; // máquina já escolhida (ex.: clique no mapa)
+  comSaldo?: ComSaldo[]; // clientes com minutos (pagar com minutos de...)
   onIniciado?: () => void; // fecha a janela depois de iniciar
 };
 
@@ -42,13 +44,14 @@ type CamposProps = Props & {
   enviando: boolean;
 };
 
-function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, res, acao, enviando }: CamposProps) {
+function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, comSaldo = [], res, acao, enviando }: CamposProps) {
   const [busca, setBusca] = useState("");
   const [cliente, setCliente] = useState<ClienteOpcao | null>(null);
   const [aberto, setAberto] = useState(false);
   const [equip, setEquip] = useState(equipInicial ?? "livre"); // livre = tempo sem máquina fixa
   const [ini, setIni] = useState(agora);
   const [prev, setPrev] = useState(""); // fim previsto (vazio = tempo livre)
+  const [minDe, setMinDe] = useState(""); // pagar com minutos de (vazio = não)
   const comTempo = equip !== "";
   const escolhida = equipamentos.find((e) => e.id === equip);
 
@@ -184,6 +187,20 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
           >
             Livre (sem hora para acabar)
           </button>
+        </div>
+      )}
+
+      {/* Pagar com minutos de alguém (o próprio cliente, um amigo, promoção) */}
+      {comTempo && comSaldo.length > 0 && (
+        <div className="space-y-2 sm:col-span-6">
+          <Label htmlFor="minutos_de">Pagar com minutos de</Label>
+          <UsarMinutos id="minutos_de" comSaldo={comSaldo} name="minutos_de" value={minDe} onChange={setMinDe} primeiro={cliente?.id} />
+          {cliente && !minDe && comSaldo.some((c) => c.id === cliente.id) && (
+            <button type="button" onClick={() => setMinDe(cliente.id)} className="text-xs text-purple hover:underline">
+              {cliente.nome} tem {comSaldo.find((c) => c.id === cliente.id)!.saldo} min. Usar?
+            </button>
+          )}
+          {minDe && <p className="text-xs text-muted-foreground">Ao encerrar, desconta sozinho até o saldo dar. O que faltar fica a receber.</p>}
         </div>
       )}
 

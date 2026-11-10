@@ -19,7 +19,8 @@ export type Resultado = { ok: boolean; msg: string; n?: number; abrir?: string }
 
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
-const atualizar = () => revalidatePath("/painel/caixa", "layout");
+const atualizar = () => revalidatePath("/painel", "layout");
+const uuidOuNulo = (v: FormDataEntryValue | null) => (/^[0-9a-f-]{36}$/.test(String(v ?? "")) ? String(v) : null);
 
 // Novo atendimento. "equipamento_id": id da máquina, "livre" (tempo sem máquina fixa) ou vazio (só consumo)
 export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Resultado> {
@@ -34,6 +35,7 @@ export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Re
   const hIni = String(form.get("inicio") ?? "");
   const hPrev = String(form.get("fim_previsto") ?? "");
   const valorHora = lerValor(String(form.get("valor_hora") ?? "0"));
+  const minutosDe = uuidOuNulo(form.get("minutos_de"));
 
   if (!nome) return { ok: false, msg: "Digite o nome do cliente." };
   if (comTempo && !HORA.test(hIni)) return { ok: false, msg: "Informe a hora de início." };
@@ -52,6 +54,7 @@ export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Re
       inicio,
       fim_previsto: comTempo && hPrev ? paraTimestamp(data, hPrev, inicio!) : null,
       valor_hora: comTempo ? valorHora : 0,
+      minutos_de: comTempo ? minutosDe : null,
     })
     .select("id")
     .single();
@@ -162,6 +165,7 @@ export async function salvarAtendimento(_: Resultado, form: FormData): Promise<R
       fim_previsto: fimPrevisto,
       valor_hora: comTempo ? valorHora : 0,
       valor_uso: valorUso,
+      minutos_de: comTempo ? uuidOuNulo(form.get("minutos_de")) : null,
       observacao: String(form.get("observacao") ?? "").trim().slice(0, 300) || null,
     })
     .eq("id", id);
@@ -239,9 +243,15 @@ export async function receber(_: Resultado, form: FormData): Promise<Resultado> 
 
   const { error } = await supabase
     .from("pagamentos")
-    .insert({ arena_id: arenaId, atendimento_id: String(form.get("atendimento_id")), forma, valor });
+    .insert({
+      arena_id: arenaId,
+      atendimento_id: String(form.get("atendimento_id")),
+      forma,
+      valor,
+      cliente_minutos_id: forma === "minutos" ? uuidOuNulo(form.get("cliente_minutos_id")) : null, // de quem sai o saldo
+    });
   if (error?.message.includes("insuficiente")) return { ok: false, msg: error.message };
-  if (error?.message.includes("cliente cadastrado")) return { ok: false, msg: "Pagar com minutos só para cliente cadastrado." };
+  if (error?.message.includes("escolha de qual cliente")) return { ok: false, msg: "Escolha de qual cliente saem os minutos." };
   if (error) return { ok: false, msg: "Erro ao registrar pagamento." };
 
   atualizar();

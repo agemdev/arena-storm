@@ -5,6 +5,7 @@ import { exigirAdmin } from "@/lib/auth";
 import { listarCidadesDoEstado, listarEstados } from "@/lib/locais";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ClienteForm from "../ClienteForm";
+import DarMinutos from "./DarMinutos";
 import { FUSO } from "@/lib/caixa";
 
 type Params = PageProps<"/painel/clientes/[id]">["params"];
@@ -49,7 +50,7 @@ async function Formulario({ params }: { params: Params }) {
     listarCidadesDoEstado(uf),
     supabase
       .from("minutos_lancamentos")
-      .select("id, minutos, motivo, criado_em")
+      .select("id, minutos, motivo, obs, criado_em")
       .eq("cliente_id", c.id)
       .order("criado_em", { ascending: false }),
   ]);
@@ -85,7 +86,8 @@ async function Formulario({ params }: { params: Params }) {
             Banco de Minutos · <span className="text-cyan">{saldo} min</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <DarMinutos clienteId={c.id} />
           {lancamentos.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Nenhum lançamento ainda. Cada R$ 1 pago no caixa vira 1 minuto.
@@ -99,6 +101,7 @@ async function Formulario({ params }: { params: Params }) {
                       timeZone: FUSO,
                     })}{" "}
                     · {MOTIVOS[l.motivo as keyof typeof MOTIVOS]}
+                    {l.obs && ` (${l.obs})`}
                   </span>
                   <span className={l.minutos > 0 ? "text-green" : "text-amber"}>
                     {l.minutos > 0 ? "+" : ""}
@@ -119,4 +122,5 @@ const MOTIVOS = {
   uso: "Usado no caixa",
   estorno: "Estorno",
   ajuste: "Ajuste",
+  promocao: "🎁 Promoção",
 };

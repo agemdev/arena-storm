@@ -90,6 +90,7 @@ export type AtendimentoLinha = {
   ajuste_motivo: string | null;
   cancelado_em: string | null;
   cancelado_motivo: string | null;
+  minutos_de: string | null; // pagar com minutos deste cliente (desconta ao encerrar)
   criado_em: string;
   equipamentos: { nome: string } | null;
   consumos: { total: number }[];
@@ -112,7 +113,7 @@ export function totais(a: AtendimentoLinha) {
 }
 
 export const SELECT_ATENDIMENTO =
-  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
+  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
 
 // Aviso de tempo acabando: quantos minutos antes
 export const AVISO_MINUTOS = 5;
@@ -145,3 +146,6 @@ export const SITUACOES_MAQUINA = {
   funcionario: { nome: "Funcionário", icone: "👤", cor: "border-sky-400 bg-sky-500/15 hover:bg-sky-500/25" },
   sem_cobranca: { nome: "Uso sem cobrança", icone: "🎁", cor: "border-slate-300 bg-slate-400/20 hover:bg-slate-400/30" },
 } as const;
+
+// Cliente com saldo de minutos (para "usar minutos de...")
+export type ComSaldo = { id: string; nome: string; saldo: number };
