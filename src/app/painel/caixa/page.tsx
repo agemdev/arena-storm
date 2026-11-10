@@ -22,7 +22,8 @@ import Cancelar from "./Cancelar";
 import DetalheJanela from "./Detalhe";
 import LinhaClicavel from "./LinhaClicavel";
 import { encerrarAtendimento, estenderTempo } from "./actions";
-import { encerrarVencidos, reservasProximas } from "@/lib/caixa-servidor";
+import { encerrarVencidos, estadoMaquinas } from "@/lib/caixa-servidor";
+import AoVivo from "@/components/painel/AoVivo";
 import UsoAoVivo from "@/components/painel/UsoAoVivo";
 
 type Busca = PageProps<"/painel/caixa">["searchParams"];
@@ -93,20 +94,16 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
     return `/painel/caixa${s ? `?${s}` : ""}`;
   };
 
-  const [lista, clientes, equips, plano] = await Promise.all([
+  const [lista, clientes, plano] = await Promise.all([
     supabase.from("atendimentos").select(SELECT_ATENDIMENTO).eq("data", data),
     supabase.from("clientes").select("id, nome, whatsapp").order("nome").limit(5000),
-    supabase.from("equipamentos").select("id, nome").eq("ativo", true).order("ordem"),
     // Valor/hora padrão = primeiro plano "/hora" da tabela de preços
     supabase.from("planos").select("preco").eq("arena_id", arenaId).eq("unidade", "/hora").order("ordem").limit(1).maybeSingle(),
   ]);
   const atendimentos = (lista.data ?? []) as unknown as AtendimentoLinha[];
 
-  // Máquinas ocupadas (atendimento sem fim, de qualquer dia)
-  const { data: abertos } = await supabase.from("atendimentos").select("equipamento_id").is("fim", null).not("equipamento_id", "is", null);
-  const ocupadas = new Set((abertos ?? []).map((a) => a.equipamento_id));
-
-  const reservadas = await reservasProximas(supabase); // aviso no "Novo atendimento"
+  // Máquinas: em uso, reserva próxima, TV dividida (avisos no "Novo atendimento")
+  const { maquinas } = await estadoMaquinas(supabase);
 
   // Resumo do dia (cancelados não contam)
   const linhas = ordenar(
@@ -154,7 +151,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
             data={data}
             valorHora={String(plano.data?.preco ?? 12).replace(".", ",")}
             clientes={clientes.data ?? []}
-            equipamentos={(equips.data ?? []).map((e) => ({ ...e, emUso: ocupadas.has(e.id), reserva: reservadas.get(e.id) }))}
+            equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv }))}
           />
         </div>
       </div>
@@ -276,6 +273,8 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
           )}
         </CardContent>
       </Card>
+
+      <AoVivo />
 
       {/* Janela flutuante do atendimento escolhido */}
       {abrirId && (

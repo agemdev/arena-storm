@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, Clock, Monitor, ShoppingBasket, Tag } from "lucide-react";
+import { Building2, Clock, LayoutGrid, Monitor, ShoppingBasket, Tag } from "lucide-react";
 
 // Itens da barra lateral. Nova página de configuração? Adicione aqui.
 const ITENS = [
@@ -10,6 +10,7 @@ const ITENS = [
   { href: "/painel/configuracoes/horarios", label: "Horários", icone: Clock },
   { href: "/painel/configuracoes/precos", label: "Preços e pacotes", icone: Tag },
   { href: "/painel/configuracoes/equipamentos", label: "Equipamentos", icone: Monitor },
+  { href: "/painel/configuracoes/mapa", label: "Mapa das máquinas", icone: LayoutGrid },
   { href: "/painel/configuracoes/produtos", label: "Produtos", icone: ShoppingBasket },
 ];
 

@@ -10,7 +10,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { DURACOES, somarMinutosHora } from "@/lib/caixa";
 
 export type ClienteOpcao = { id: string; nome: string; whatsapp: string };
-export type EquipOpcao = { id: string; nome: string; emUso: boolean; reserva?: string }; // reserva = "20:00"
+export type EquipOpcao = { id: string; nome: string; emUso: boolean; reserva?: string; tv?: string }; // reserva = "20:00"; tv = quem usa a TV dividida
 
 type Props = {
   data: string;
@@ -18,6 +18,7 @@ type Props = {
   valorHora: string; // "12"
   clientes: ClienteOpcao[];
   equipamentos: EquipOpcao[];
+  equipInicial?: string; // máquina já escolhida (ex.: clique no mapa)
   onIniciado?: () => void; // fecha a janela depois de iniciar
 };
 
@@ -41,14 +42,15 @@ type CamposProps = Props & {
   enviando: boolean;
 };
 
-function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, enviando }: CamposProps) {
+function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, res, acao, enviando }: CamposProps) {
   const [busca, setBusca] = useState("");
   const [cliente, setCliente] = useState<ClienteOpcao | null>(null);
   const [aberto, setAberto] = useState(false);
-  const [equip, setEquip] = useState("livre"); // livre = tempo sem máquina fixa
+  const [equip, setEquip] = useState(equipInicial ?? "livre"); // livre = tempo sem máquina fixa
   const [ini, setIni] = useState(agora);
   const [prev, setPrev] = useState(""); // fim previsto (vazio = tempo livre)
   const comTempo = equip !== "";
+  const escolhida = equipamentos.find((e) => e.id === equip);
 
   // Até 8 clientes que batem com o nome ou número digitado
   const sugestoes = useMemo(() => {
@@ -126,15 +128,15 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
               {e.nome}
               {e.emUso ? " (em uso)" : ""}
               {e.reserva ? ` ⚠ reservada às ${e.reserva}` : ""}
+              {e.tv ? ` ⚠ TV em uso (${e.tv})` : ""}
             </option>
           ))}
           <option value="">Só consumo (sem tempo)</option>
         </NativeSelect>
-        {equipamentos.find((e) => e.id === equip)?.reserva && (
-          <p className="text-xs text-amber">
-            ⚠ Esta máquina tem reserva às {equipamentos.find((e) => e.id === equip)!.reserva}. Combine o fim antes desse horário.
-          </p>
+        {escolhida?.reserva && (
+          <p className="text-xs text-amber">⚠ Esta máquina tem reserva às {escolhida.reserva}. Combine o fim antes desse horário.</p>
         )}
+        {escolhida?.tv && <p className="text-xs text-amber">⚠ A TV desta máquina está em uso pelo {escolhida.tv}.</p>}
       </div>
 
       <div className="space-y-2 sm:col-span-2">
