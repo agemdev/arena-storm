@@ -34,8 +34,8 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
   // Colunas/linhas vazias viram só um corredor estreito → sobra espaço para os cartões
   const usadasX = new Set(noMapa.map((m) => m.mapa_x));
   const usadasY = new Set(noMapa.map((m) => m.mapa_y));
-  const gradeX = Array.from({ length: colunas }, (_, i) => (usadasX.has(i + 1) ? "minmax(7.5rem, 1fr)" : "1.5rem")).join(" ");
-  const gradeY = Array.from({ length: linhas }, (_, i) => (usadasY.has(i + 1) ? "minmax(7.5rem, auto)" : "1.5rem")).join(" ");
+  const gradeX = Array.from({ length: colunas }, (_, i) => (usadasX.has(i + 1) ? "minmax(0, 1fr)" : "minmax(0, 0.3fr)")).join(" ");
+  const gradeY = Array.from({ length: linhas }, (_, i) => (usadasY.has(i + 1) ? "minmax(7em, auto)" : "1.5em")).join(" ");
 
   const clicar = (m: MaquinaEstado) => {
     if (m.atendimento) iniciar(() => router.push(`/painel/maquinas?abrir=${m.atendimento!.id}`, { scroll: false }));
@@ -58,8 +58,9 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
         <Legenda cor="border-purple bg-purple/15" texto="Reservada em breve" />
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-card p-4">
-        <div className="grid w-max min-w-full gap-2" style={{ gridTemplateColumns: gradeX, gridTemplateRows: gradeY }}>
+      {/* Computador: mapa que encolhe/aumenta junto com a tela (fonte proporcional à largura) */}
+      <div className="@container hidden rounded-2xl border border-border bg-card p-4 md:block">
+        <div className="grid gap-[0.6em]" style={{ gridTemplateColumns: gradeX, gridTemplateRows: gradeY, fontSize: "clamp(10px, 1.3cqw, 16px)" }}>
           {noMapa.map((m) => (
             <div key={m.id} style={{ gridColumnStart: m.mapa_x!, gridRowStart: m.mapa_y! }}>
               <Cartao m={m} onClick={() => clicar(m)} />
@@ -68,10 +69,17 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
         </div>
       </div>
 
+      {/* Celular: lista em 2 colunas (sem mapa) */}
+      <div className="grid grid-cols-2 gap-2 text-[14px] sm:grid-cols-3 md:hidden">
+        {maquinas.map((m) => (
+          <Cartao key={m.id} m={m} onClick={() => clicar(m)} />
+        ))}
+      </div>
+
       {fora.length > 0 && (
-        <div className="space-y-2">
+        <div className="hidden space-y-2 md:block">
           <h2 className="text-sm font-semibold text-muted-foreground">Fora do mapa (posicione em Configurações → Mapa das máquinas)</h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-4 gap-2 text-[14px] lg:grid-cols-6">
             {fora.map((m) => (
               <Cartao key={m.id} m={m} onClick={() => clicar(m)} />
             ))}
@@ -82,7 +90,7 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
       {semMaquina.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground">Em tempo livre (sem máquina fixa)</h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-2 text-[14px] sm:grid-cols-4 lg:grid-cols-6">
             {semMaquina.map((a) => (
               <Cartao
                 key={a.id}
@@ -126,7 +134,7 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
   const a = m.atendimento;
 
   let cor = "border-green/70 bg-green/10 hover:bg-green/20";
-  let linha2: React.ReactNode = <span className="text-green">Livre</span>;
+  let linha2: React.ReactNode = <span className="text-[1em] text-green">Livre</span>;
   let linha3: React.ReactNode = null;
 
   if (a) {
@@ -138,9 +146,9 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
           ? "border-amber bg-amber/25"
           : "border-cyan bg-cyan/15 hover:bg-cyan/25";
     const uso = agora === null ? null : calcularUso(a.inicio, new Date(agora).toISOString(), a.valor_hora);
-    linha2 = <span className="truncate text-sm font-semibold">{a.nome}</span>;
+    linha2 = <span className="w-full truncate text-[1em] font-semibold">{a.nome}</span>;
     linha3 = (
-      <span className="text-xs">
+      <span className="text-[0.85em] leading-snug">
         {uso ? `${duracao(uso.minutos)} · ${reais(uso.valor)}` : "…"}
         <br />
         <b className={resta !== null && resta <= AVISO_MINUTOS ? (resta <= 0 ? "text-destructive" : "text-amber") : "text-muted-foreground"}>
@@ -153,18 +161,18 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
   }
 
   return (
-    <button type="button" onClick={onClick} className={`flex h-full min-h-[7.5rem] w-full min-w-0 flex-col items-start gap-1 overflow-hidden rounded-xl border-2 p-2.5 text-left transition ${cor}`}>
+    <button type="button" onClick={onClick} className={`flex h-full min-h-[7em] w-full min-w-0 flex-col items-start gap-[0.3em] overflow-hidden rounded-[0.8em] border-2 p-[0.7em] text-left transition ${cor}`}>
       <span className="flex w-full items-start gap-1.5">
-        <Icone className="mt-0.5 size-4 shrink-0 opacity-80" />
-        <span className="line-clamp-2 text-sm leading-tight font-bold break-words">{m.nome}</span>
+        <Icone className="mt-[0.1em] size-[1.1em] shrink-0 opacity-80" />
+        <span className="line-clamp-2 min-w-0 text-[1em] leading-tight font-bold break-words">{m.nome}</span>
       </span>
-      <span className="flex w-full min-w-0 flex-col gap-0.5 text-sm">
+      <span className="flex w-full min-w-0 flex-col gap-[0.15em]">
         {linha2}
         {linha3}
       </span>
       <span className="mt-auto flex flex-wrap gap-1">
-        {m.reserva && <span className="rounded bg-purple/30 px-1.5 text-[11px] font-semibold text-purple">📅 {m.reserva}</span>}
-        {m.tv && <span className="rounded bg-amber/30 px-1.5 text-[11px] font-semibold text-amber">📺 TV: {m.tv}</span>}
+        {m.reserva && <span className="rounded bg-purple/30 px-[0.4em] text-[0.75em] font-semibold text-purple">📅 {m.reserva}</span>}
+        {m.tv && <span className="rounded bg-amber/30 px-[0.4em] text-[0.75em] font-semibold text-amber">📺 TV: {m.tv}</span>}
       </span>
     </button>
   );
