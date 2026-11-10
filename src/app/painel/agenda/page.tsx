@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import LinhaClicavel from "../caixa/LinhaClicavel";
 import LinhaDoTempo, { type Bloco } from "./LinhaDoTempo";
 import DetalheAgenda from "./Detalhe";
+import AoVivo from "@/components/painel/AoVivo";
 
 export default function AgendaPage({ searchParams }: PageProps<"/painel/agenda">) {
   return (
@@ -146,6 +147,8 @@ async function Agenda({ searchParams }: { searchParams: PageProps<"/painel/agend
           )}
         </CardContent>
       </Card>
+
+      <AoVivo />
 
       {abrirId && (
         <Suspense fallback={null}>

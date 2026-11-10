@@ -71,6 +71,8 @@ class Hub extends EventEmitter {
         clearTimeout(espera);
         espera = setTimeout(() => this.carregar(), 500);
       };
+      const { data: sessao } = await sb.auth.getSession();
+      if (sessao.session) await sb.realtime.setAuth(sessao.session.access_token); // "ao vivo" com o login
       const canal = sb.channel("servidor");
       for (const table of ["atendimentos", "equipamentos", "pagamentos"]) canal.on("postgres_changes", { event: "*", schema: "public", table }, recarregar);
       canal.subscribe();
