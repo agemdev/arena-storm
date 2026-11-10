@@ -24,6 +24,7 @@ export default function PainelLayout({ children }: LayoutProps<"/painel">) {
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/painel" className="hover:text-foreground">Início</Link>
             <Link href="/painel/caixa" className="hover:text-foreground">Caixa</Link>
+            <Link href="/painel/agenda" className="hover:text-foreground">Agenda</Link>
             <Link href="/painel/clientes" className="hover:text-foreground">Clientes</Link>
             <Link href="/painel/configuracoes" className="hover:text-foreground">Configurações</Link>
           </nav>

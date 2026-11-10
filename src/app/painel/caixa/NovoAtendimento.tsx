@@ -10,7 +10,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { DURACOES, somarMinutosHora } from "@/lib/caixa";
 
 export type ClienteOpcao = { id: string; nome: string; whatsapp: string };
-export type EquipOpcao = { id: string; nome: string; emUso: boolean };
+export type EquipOpcao = { id: string; nome: string; emUso: boolean; reserva?: string }; // reserva = "20:00"
 
 type Props = {
   data: string;
@@ -125,10 +125,16 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, res, acao, env
             <option key={e.id} value={e.id} disabled={e.emUso}>
               {e.nome}
               {e.emUso ? " (em uso)" : ""}
+              {e.reserva ? ` ⚠ reservada às ${e.reserva}` : ""}
             </option>
           ))}
           <option value="">Só consumo (sem tempo)</option>
         </NativeSelect>
+        {equipamentos.find((e) => e.id === equip)?.reserva && (
+          <p className="text-xs text-amber">
+            ⚠ Esta máquina tem reserva às {equipamentos.find((e) => e.id === equip)!.reserva}. Combine o fim antes desse horário.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2 sm:col-span-2">

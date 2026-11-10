@@ -22,7 +22,7 @@ import Cancelar from "./Cancelar";
 import DetalheJanela from "./Detalhe";
 import LinhaClicavel from "./LinhaClicavel";
 import { encerrarAtendimento, estenderTempo } from "./actions";
-import { encerrarVencidos } from "@/lib/caixa-servidor";
+import { encerrarVencidos, reservasProximas } from "@/lib/caixa-servidor";
 import UsoAoVivo from "@/components/painel/UsoAoVivo";
 
 type Busca = PageProps<"/painel/caixa">["searchParams"];
@@ -106,6 +106,8 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
   const { data: abertos } = await supabase.from("atendimentos").select("equipamento_id").is("fim", null).not("equipamento_id", "is", null);
   const ocupadas = new Set((abertos ?? []).map((a) => a.equipamento_id));
 
+  const reservadas = await reservasProximas(supabase); // aviso no "Novo atendimento"
+
   // Resumo do dia (cancelados não contam)
   const linhas = ordenar(
     atendimentos.map((a) => ({ a, t: totais(a) })),
@@ -152,7 +154,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
             data={data}
             valorHora={String(plano.data?.preco ?? 12).replace(".", ",")}
             clientes={clientes.data ?? []}
-            equipamentos={(equips.data ?? []).map((e) => ({ ...e, emUso: ocupadas.has(e.id) }))}
+            equipamentos={(equips.data ?? []).map((e) => ({ ...e, emUso: ocupadas.has(e.id), reserva: reservadas.get(e.id) }))}
           />
         </div>
       </div>
