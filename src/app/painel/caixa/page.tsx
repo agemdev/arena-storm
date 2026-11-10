@@ -23,7 +23,7 @@ import Cancelar from "./Cancelar";
 import DetalheJanela from "./Detalhe";
 import LinhaClicavel from "./LinhaClicavel";
 import { encerrarAtendimento, estenderTempo } from "./actions";
-import { clientesComSaldo, encerrarVencidos, estadoMaquinas } from "@/lib/caixa-servidor";
+import { clientesComPacote, clientesComSaldo, encerrarVencidos, estadoMaquinas } from "@/lib/caixa-servidor";
 import AoVivo from "@/components/painel/AoVivo";
 import UsoAoVivo from "@/components/painel/UsoAoVivo";
 
@@ -104,7 +104,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
   const atendimentos = (lista.data ?? []) as unknown as AtendimentoLinha[];
 
   // Máquinas: em uso, reserva próxima, TV dividida (avisos no "Novo atendimento")
-  const [{ maquinas }, comSaldo] = await Promise.all([estadoMaquinas(supabase), clientesComSaldo(supabase)]);
+  const [{ maquinas }, comSaldo, comPacote] = await Promise.all([estadoMaquinas(supabase), clientesComSaldo(supabase), clientesComPacote(supabase)]);
 
   // Resumo do dia (cancelados não contam)
   const linhas = ordenar(
@@ -153,18 +153,20 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
             valorHora={String(plano.data?.preco ?? 12).replace(".", ",")}
             clientes={clientes.data ?? []}
             comSaldo={comSaldo}
+            comPacote={comPacote}
             equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv, bloqueio: m.situacao !== "normal" ? SITUACOES_MAQUINA[m.situacao].nome : undefined }))}
           />
         </div>
       </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
         <Resumo titulo="Total do dia" valor={reais(totalDia)} destaque />
         <Resumo titulo="Dinheiro" valor={reais(porForma.dinheiro)} />
         <Resumo titulo="Pix" valor={reais(porForma.pix)} />
         <Resumo titulo="Cartão" valor={reais(porForma.cartao)} />
         <Resumo titulo="Pago em minutos" valor={reais(porForma.minutos)} />
+        <Resumo titulo="Pago com pacote" valor={reais(porForma.pacote)} />
         <Resumo titulo="A receber" valor={reais(aReceber)} alerta={aReceber > 0} />
         <Resumo titulo="Máquinas em uso" valor={String(emUso)} />
       </div>

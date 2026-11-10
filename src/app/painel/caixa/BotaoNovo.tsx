@@ -8,7 +8,7 @@ import Janela from "@/components/painel/Janela";
 import { hhmm, type ComSaldo } from "@/lib/caixa";
 import NovoAtendimento, { type ClienteOpcao, type EquipOpcao } from "./NovoAtendimento";
 
-type Props = { data: string; valorHora: string; clientes: ClienteOpcao[]; equipamentos: EquipOpcao[]; comSaldo: ComSaldo[] };
+type Props = { data: string; valorHora: string; clientes: ClienteOpcao[]; equipamentos: EquipOpcao[]; comSaldo: ComSaldo[]; comPacote: ComSaldo[] };
 
 // Botão "Novo atendimento" que abre o formulário flutuante
 export default function BotaoNovo(props: Props) {

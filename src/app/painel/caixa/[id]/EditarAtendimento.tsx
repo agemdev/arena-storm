@@ -25,6 +25,8 @@ type Props = {
   minutosDe: string;
   clienteId: string | null;
   comSaldo: ComSaldo[];
+  pacoteDe: string;
+  comPacote: ComSaldo[];
 };
 
 // Corrigir dados a qualquer momento (mesmo em uso). O valor do uso é recalculado pelos horários.
@@ -36,6 +38,7 @@ export default function EditarAtendimento(p: Props) {
   const [fim, setFim] = useState(p.fim);
   const [vh, setVh] = useState(p.valorHora);
   const [minDe, setMinDe] = useState(p.minutosDe);
+  const [pacDe, setPacDe] = useState(p.pacoteDe);
   const comTempo = modo !== "";
   const encerrado = !p.emUso && !!p.fim;
 
@@ -115,10 +118,12 @@ export default function EditarAtendimento(p: Props) {
 
       {comTempo && (
         <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+          <Label htmlFor="e-pac">Usar pacote de horas de</Label>
+          <UsarMinutos id="e-pac" comSaldo={p.comPacote} name="pacote_de" value={pacDe} onChange={setPacDe} primeiro={p.clienteId} vazio="Não usar pacote" horas />
           <Label htmlFor="e-min">Pagar com minutos de</Label>
           <UsarMinutos id="e-min" comSaldo={p.comSaldo} name="minutos_de" value={minDe} onChange={setMinDe} primeiro={p.clienteId} />
           <p className="text-xs text-muted-foreground">
-            {encerrado ? "Já encerrado: para cobrar agora, use Receber → Minutos." : "Ao encerrar, desconta sozinho até o saldo dar."}
+            {encerrado ? "Já encerrado: para cobrar agora, use Receber → Pacote ou Minutos." : "Ao encerrar, desconta sozinho: primeiro o pacote (tempo), depois os minutos (R$)."}
           </p>
         </div>
       )}

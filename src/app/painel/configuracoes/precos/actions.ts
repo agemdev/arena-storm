@@ -44,6 +44,11 @@ export async function salvarPlano(_: Resultado, form: FormData): Promise<Resulta
     destaque: form.get("destaque") === "on",
     ativo: form.get("ativo") === "on",
     ordem: Number(form.get("ordem")) || 0,
+    // Pacote de horas: "5" ou "1,5" horas → minutos de jogo (vazio = não é pacote)
+    pacote_minutos: (() => {
+      const h = Number(String(form.get("pacote_horas") ?? "").replace(",", "."));
+      return categoria === "plano" && h > 0 ? Math.round(h * 60) : null;
+    })(),
   };
 
   const { error } = id

@@ -57,6 +57,15 @@ export default function PlanoForm({ plano, categoria, proximaOrdem = 0 }: Props)
             <Label>Ordem</Label>
             <Input name="ordem" type="number" min={0} defaultValue={plano?.ordem ?? proximaOrdem} />
           </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>Pacote de horas (quantas horas dá)</Label>
+            <Input
+              name="pacote_horas"
+              inputMode="decimal"
+              defaultValue={plano?.pacote_minutos ? String(plano.pacote_minutos / 60).replace(".", ",") : ""}
+              placeholder="Vazio = não é pacote. Ex.: 5"
+            />
+          </div>
         </>
       )}
 

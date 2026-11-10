@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { DURACOES, somarMinutosHora, type ComSaldo } from "@/lib/caixa";
+import { duracao, DURACOES, somarMinutosHora, type ComSaldo } from "@/lib/caixa";
 import UsarMinutos from "@/components/painel/UsarMinutos";
 
 export type ClienteOpcao = { id: string; nome: string; whatsapp: string };
@@ -21,6 +21,7 @@ type Props = {
   equipamentos: EquipOpcao[];
   equipInicial?: string; // máquina já escolhida (ex.: clique no mapa)
   comSaldo?: ComSaldo[]; // clientes com minutos (pagar com minutos de...)
+  comPacote?: ComSaldo[]; // clientes com pacote de horas
   onIniciado?: () => void; // fecha a janela depois de iniciar
 };
 
@@ -44,7 +45,7 @@ type CamposProps = Props & {
   enviando: boolean;
 };
 
-function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, comSaldo = [], res, acao, enviando }: CamposProps) {
+function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, comSaldo = [], comPacote = [], res, acao, enviando }: CamposProps) {
   const [busca, setBusca] = useState("");
   const [cliente, setCliente] = useState<ClienteOpcao | null>(null);
   const [aberto, setAberto] = useState(false);
@@ -52,6 +53,7 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
   const [ini, setIni] = useState(agora);
   const [prev, setPrev] = useState(""); // fim previsto (vazio = tempo livre)
   const [minDe, setMinDe] = useState(""); // pagar com minutos de (vazio = não)
+  const [pacDe, setPacDe] = useState(""); // usar pacote de horas de (vazio = não)
   const comTempo = equip !== "";
   const escolhida = equipamentos.find((e) => e.id === equip);
 
@@ -187,6 +189,20 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
           >
             Livre (sem hora para acabar)
           </button>
+        </div>
+      )}
+
+      {/* Pacote de horas: desconta o tempo jogado */}
+      {comTempo && comPacote.length > 0 && (
+        <div className="space-y-2 sm:col-span-6">
+          <Label htmlFor="pacote_de">Usar pacote de horas de</Label>
+          <UsarMinutos id="pacote_de" comSaldo={comPacote} name="pacote_de" value={pacDe} onChange={setPacDe} primeiro={cliente?.id} vazio="Não usar pacote" horas />
+          {cliente && !pacDe && comPacote.some((c) => c.id === cliente.id) && (
+            <button type="button" onClick={() => setPacDe(cliente.id)} className="text-xs text-cyan hover:underline">
+              {cliente.nome} tem pacote ({duracao(comPacote.find((c) => c.id === cliente.id)!.saldo)} h). Usar?
+            </button>
+          )}
+          {pacDe && <p className="text-xs text-muted-foreground">Ao encerrar, desconta o tempo jogado do pacote.</p>}
         </div>
       )}
 

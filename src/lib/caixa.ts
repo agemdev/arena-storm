@@ -8,6 +8,7 @@ export const FORMAS = {
   pix: "Pix",
   cartao: "Cartão",
   minutos: "Minutos",
+  pacote: "Pacote",
 } as const;
 export type Forma = keyof typeof FORMAS;
 
@@ -91,6 +92,7 @@ export type AtendimentoLinha = {
   cancelado_em: string | null;
   cancelado_motivo: string | null;
   minutos_de: string | null; // pagar com minutos deste cliente (desconta ao encerrar)
+  pacote_de: string | null; // usar o pacote de horas deste cliente (desconta ao encerrar)
   criado_em: string;
   equipamentos: { nome: string } | null;
   consumos: { total: number }[];
@@ -113,7 +115,7 @@ export function totais(a: AtendimentoLinha) {
 }
 
 export const SELECT_ATENDIMENTO =
-  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
+  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
 
 // Aviso de tempo acabando: quantos minutos antes
 export const AVISO_MINUTOS = 5;

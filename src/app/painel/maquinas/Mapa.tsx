@@ -20,10 +20,11 @@ type Props = {
   valorHora: string;
   clientes: ClienteOpcao[];
   comSaldo: ComSaldo[];
+  comPacote: ComSaldo[];
 };
 
 // Mapa da arena: cada máquina no seu lugar, com a cor da situação
-export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes, comSaldo }: Props) {
+export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes, comSaldo, comPacote }: Props) {
   const router = useRouter();
   const [abrindo, iniciar] = useTransition();
   const [nova, setNova] = useState<{ equip: MaquinaEstado; agora: string } | null>(null);
@@ -149,6 +150,7 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes, 
                 valorHora={valorHora}
                 clientes={clientes}
                 comSaldo={comSaldo}
+                comPacote={comPacote}
                 equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv, bloqueio: m.situacao !== "normal" ? SITUACOES_MAQUINA[m.situacao].nome : undefined }))}
                 equipInicial={nova.equip.id}
                 onIniciado={fechar}

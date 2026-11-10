@@ -23,7 +23,7 @@ async function Conteudo() {
   const { supabase, arenaId } = await exigirAdmin();
   const { data } = await supabase
     .from("planos")
-    .select("id, categoria, nome, preco, unidade, descricao, itens, destaque, ativo, ordem")
+    .select("id, categoria, nome, preco, unidade, descricao, itens, destaque, ativo, ordem, pacote_minutos")
     .eq("arena_id", arenaId)
     .order("ordem");
   const todos = (data ?? []) as Plano[];

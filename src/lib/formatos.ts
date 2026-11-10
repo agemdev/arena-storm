@@ -14,6 +14,7 @@ export type Plano = {
   destaque: boolean;
   ativo: boolean;
   ordem: number;
+  pacote_minutos?: number | null; // pacote de horas: minutos de jogo que dá
 };
 
 // "09:00:00" → "9h" · "09:30" → "9h30"

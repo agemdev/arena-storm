@@ -55,6 +55,7 @@ export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Re
       fim_previsto: comTempo && hPrev ? paraTimestamp(data, hPrev, inicio!) : null,
       valor_hora: comTempo ? valorHora : 0,
       minutos_de: comTempo ? minutosDe : null,
+      pacote_de: comTempo ? uuidOuNulo(form.get("pacote_de")) : null,
     })
     .select("id")
     .single();
@@ -166,6 +167,7 @@ export async function salvarAtendimento(_: Resultado, form: FormData): Promise<R
       valor_hora: comTempo ? valorHora : 0,
       valor_uso: valorUso,
       minutos_de: comTempo ? uuidOuNulo(form.get("minutos_de")) : null,
+      pacote_de: comTempo ? uuidOuNulo(form.get("pacote_de")) : null,
       observacao: String(form.get("observacao") ?? "").trim().slice(0, 300) || null,
     })
     .eq("id", id);
@@ -238,8 +240,12 @@ export async function receber(_: Resultado, form: FormData): Promise<Resultado> 
   if (!(forma in FORMAS)) return { ok: false, msg: "Escolha a forma de pagamento." };
   if (!(valor > 0)) return { ok: false, msg: "Digite o valor recebido." };
 
-  const { data: at } = await supabase.from("atendimentos").select("cancelado_em").eq("id", String(form.get("atendimento_id"))).single();
+  const { data: at } = await supabase.from("atendimentos").select("cancelado_em, valor_hora").eq("id", String(form.get("atendimento_id"))).single();
   if (at?.cancelado_em) return { ok: false, msg: "Atendimento cancelado: desfaça o cancelamento antes de receber." };
+  // Pacote de horas: o valor vira minutos de jogo pelo preço/hora do atendimento
+  const valorHora = Number(at?.valor_hora ?? 0);
+  if (forma === "pacote" && !(valorHora > 0)) return { ok: false, msg: "Pacote de horas só paga tempo de uso (atendimento sem preço/hora)." };
+  const minutosPacote = forma === "pacote" ? Math.ceil((valor * 60) / valorHora - 0.0001) : null;
 
   const { error } = await supabase
     .from("pagamentos")
@@ -248,10 +254,11 @@ export async function receber(_: Resultado, form: FormData): Promise<Resultado> 
       atendimento_id: String(form.get("atendimento_id")),
       forma,
       valor,
-      cliente_minutos_id: forma === "minutos" ? uuidOuNulo(form.get("cliente_minutos_id")) : null, // de quem sai o saldo
+      cliente_minutos_id: forma === "minutos" || forma === "pacote" ? uuidOuNulo(form.get("cliente_minutos_id")) : null, // de quem sai o saldo
+      minutos_pacote: minutosPacote,
     });
   if (error?.message.includes("insuficiente")) return { ok: false, msg: error.message };
-  if (error?.message.includes("escolha de qual cliente")) return { ok: false, msg: "Escolha de qual cliente saem os minutos." };
+  if (error?.message.includes("escolha de qual cliente")) return { ok: false, msg: "Escolha de qual cliente sai o saldo." };
   if (error) return { ok: false, msg: "Erro ao registrar pagamento." };
 
   atualizar();
@@ -268,7 +275,8 @@ export async function estornarPagamento(form: FormData) {
 // Exclui o atendimento inteiro (lançado por engano)
 export async function excluirAtendimento(form: FormData) {
   const { supabase } = await exigirAdmin();
-  const { data: a } = await supabase.from("atendimentos").select("data").eq("id", String(form.get("id"))).single();
+  const { data: a } = await supabase.from("atendimentos").select("data, cancelado_em").eq("id", String(form.get("id"))).single();
+  if (!a?.cancelado_em) await estornarCompraPacote(supabase, String(form.get("id")), -1);
   await supabase.from("atendimentos").delete().eq("id", String(form.get("id")));
   atualizar();
   redirect(`/painel/caixa?data=${a?.data ?? hojeISO()}`);
@@ -282,6 +290,7 @@ export async function cancelarAtendimento(_: Resultado, form: FormData): Promise
   if (!a) return { ok: false, msg: "Atendimento não encontrado." };
   if (a.cancelado_em) return { ok: true, msg: "Já estava cancelado." };
 
+  await estornarCompraPacote(supabase, id, -1);
   // Pagamentos voltam (minutos são devolvidos automaticamente)
   const { error: errPag } = await supabase.from("pagamentos").delete().eq("atendimento_id", id);
   if (errPag) return { ok: false, msg: "Erro ao estornar pagamentos." };
@@ -306,6 +315,21 @@ export async function cancelarAtendimento(_: Resultado, form: FormData): Promise
 // Desfaz o cancelamento (o tempo continua encerrado; receba de novo se preciso)
 export async function desfazerCancelamento(form: FormData) {
   const { supabase } = await exigirAdmin();
+  await estornarCompraPacote(supabase, String(form.get("id")), 1);
   await supabase.from("atendimentos").update({ cancelado_em: null, cancelado_motivo: null }).eq("id", String(form.get("id")));
   atualizar();
+}
+
+// Venda de pacote cancelada/excluída: tira as horas que ela deu (sinal -1) ou devolve ao desfazer (+1)
+async function estornarCompraPacote(supabase: Awaited<ReturnType<typeof exigirAdmin>>["supabase"], atendimentoId: string, sinal: 1 | -1) {
+  const { data } = await supabase.from("pacote_lancamentos").select("arena_id, cliente_id, minutos, motivo, plano_id").eq("atendimento_id", atendimentoId);
+  const compras = (data ?? []).filter((l) => l.motivo === "compra");
+  if (!compras.length) return;
+  const creditado = (data ?? []).filter((l) => l.motivo === "compra" || l.motivo === "estorno").reduce((s, l) => s + l.minutos, 0);
+  const c = compras[0];
+  // Cancelar: tira o que ainda está creditado · Desfazer: devolve a compra original (se estava estornada)
+  if (sinal === -1 && creditado > 0)
+    await supabase.from("pacote_lancamentos").insert({ arena_id: c.arena_id, cliente_id: c.cliente_id, minutos: -creditado, motivo: "estorno", plano_id: c.plano_id, atendimento_id: atendimentoId, obs: "Venda do pacote cancelada" });
+  if (sinal === 1 && creditado <= 0)
+    await supabase.from("pacote_lancamentos").insert({ arena_id: c.arena_id, cliente_id: c.cliente_id, minutos: c.minutos, motivo: "compra", plano_id: c.plano_id, atendimento_id: atendimentoId, obs: "Cancelamento desfeito" });
 }

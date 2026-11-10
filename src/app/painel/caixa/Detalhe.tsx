@@ -16,14 +16,14 @@ import {
   removerConsumo,
 } from "./actions";
 import Cancelar from "./Cancelar";
-import { clientesComSaldo } from "@/lib/caixa-servidor";
+import { clientesComPacote, clientesComSaldo } from "@/lib/caixa-servidor";
 import AjustarValor from "./[id]/AjustarValor";
 import EditarAtendimento from "./[id]/EditarAtendimento";
 import Receber from "./[id]/Receber";
 
 type Detalhe = Omit<AtendimentoLinha, "consumos" | "pagamentos"> & {
   consumos: { id: string; descricao: string; quantidade: number; valor_unit: number; total: number }[];
-  pagamentos: { id: string; forma: Forma; valor: number; criado_em: string; clientes: { nome: string } | null }[];
+  pagamentos: { id: string; forma: Forma; valor: number; criado_em: string; minutos_pacote: number | null; clientes: { nome: string } | null }[];
 };
 
 // Janela flutuante de um atendimento: tempo, consumo, pagamento e correções
@@ -32,7 +32,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
   const { data } = await supabase
     .from("atendimentos")
     .select(
-      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em, clientes(nome))",
+      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em, minutos_pacote, clientes(nome))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -47,12 +47,14 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
   const a = data as unknown as Detalhe;
   const t = totais(a);
 
-  const [produtos, equips, comSaldo] = await Promise.all([
+  const [produtos, equips, comSaldo, comPacote] = await Promise.all([
     supabase.from("produtos").select("id, nome, preco").eq("ativo", true).order("ordem").order("nome"),
     supabase.from("equipamentos").select("id, nome").eq("ativo", true).order("ordem"),
     clientesComSaldo(supabase),
+    clientesComPacote(supabase),
   ]);
   const saldoMinutos = a.cliente_id ? (comSaldo.find((c) => c.id === a.cliente_id)?.saldo ?? 0) : null;
+  const pacoteCom = a.pacote_de ? (comPacote.find((c) => c.id === a.pacote_de) ?? { nome: "cliente sem pacote", saldo: 0 }) : null;
   const pagaCom = a.minutos_de ? (comSaldo.find((c) => c.id === a.minutos_de) ?? { nome: "cliente sem saldo", saldo: 0 }) : null;
 
   const titulo = (
@@ -104,6 +106,11 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                       Início {hhmm(a.inicio)} · {a.fim_previsto ? `combinado até ${hhmm(a.fim_previsto)}` : "tempo livre"} ·{" "}
                       {reais(Number(a.valor_hora))}/hora
                     </p>
+                    {pacoteCom && (
+                      <p className="text-sm text-cyan">
+                        📦 Usa o pacote de horas de <b>{pacoteCom.nome}</b> ({duracao(pacoteCom.saldo)} h): desconta o tempo jogado ao encerrar.
+                      </p>
+                    )}
                     {pagaCom && (
                       <p className="text-sm text-purple">
                         ⏱ Paga com minutos de <b>{pagaCom.nome}</b> ({pagaCom.saldo} min): desconta sozinho ao encerrar.
@@ -208,6 +215,8 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                   minutosDe={a.minutos_de ?? ""}
                   clienteId={a.cliente_id}
                   comSaldo={comSaldo}
+                  pacoteDe={a.pacote_de ?? ""}
+                  comPacote={comPacote}
                   equipamentos={equips.data ?? []}
                 />
               </div>
@@ -237,7 +246,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                 </div>
                 {t.emUso && <p className="text-xs text-muted-foreground">Ainda em uso: encerre antes de receber o valor final.</p>}
                 {!t.emUso && <AjustarValor id={a.id} calculado={t.valorUso + t.consumo} total={t.total} temAjuste={t.ajuste !== 0} />}
-                <Receber atendimentoId={a.id} falta={t.falta} clienteId={a.cliente_id} minutosDe={a.minutos_de} comSaldo={comSaldo} />
+                <Receber atendimentoId={a.id} falta={t.falta} clienteId={a.cliente_id} minutosDe={a.minutos_de} comSaldo={comSaldo} pacoteDe={a.pacote_de} comPacote={comPacote} valorHora={Number(a.valor_hora)} />
 
                 {a.pagamentos.length > 0 && (
                   <ul className="divide-y divide-border rounded-lg border border-border text-sm">
@@ -245,7 +254,8 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                       <li key={p.id} className="flex items-center gap-3 px-3 py-2">
                         <span className="flex-1">
                           {FORMAS[p.forma]}
-                          {p.forma === "minutos" && p.clientes && <span className="text-purple"> de {p.clientes.nome}</span>}{" "}
+                          {(p.forma === "minutos" || p.forma === "pacote") && p.clientes && <span className="text-purple"> de {p.clientes.nome}</span>}
+                          {p.minutos_pacote && <span className="text-cyan"> ({duracao(p.minutos_pacote)} h)</span>}{" "}
                           <span className="text-muted-foreground">· {hhmm(p.criado_em)}</span>
                         </span>
                         <span>{reais(Number(p.valor))}</span>

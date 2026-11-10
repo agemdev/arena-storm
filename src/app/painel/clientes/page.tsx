@@ -1,3 +1,4 @@
+import { duracao } from "@/lib/caixa";
 import { Suspense } from "react";
 import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
@@ -71,6 +72,11 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
     ? await supabase.from("minutos_saldos").select("cliente_id, saldo").in("cliente_id", clientes.map((c) => c.id))
     : { data: [] };
   const saldoDe = new Map((saldos ?? []).map((s) => [s.cliente_id, s.saldo]));
+  // Pacote de horas de cada cliente
+  const { data: pacotes } = clientes?.length
+    ? await supabase.from("pacote_saldos").select("cliente_id, saldo").in("cliente_id", clientes.map((c) => c.id))
+    : { data: [] };
+  const pacoteDe = new Map((pacotes ?? []).map((s) => [s.cliente_id, Number(s.saldo)]));
 
   return (
     <Card>
@@ -91,6 +97,7 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
                 <TableHead>WhatsApp</TableHead>
                 <TableHead className="hidden md:table-cell">Cidade</TableHead>
                 <TableHead className="text-right">Minutos</TableHead>
+                <TableHead className="text-right">Pacote</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>
@@ -112,6 +119,7 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
                     {c.cidades ? `${c.cidades.nome}-${c.cidades.uf}` : "—"}
                   </TableCell>
                   <TableCell className="text-right font-medium text-cyan">{saldoDe.get(c.id) ?? 0}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">{pacoteDe.get(c.id) ? `${duracao(pacoteDe.get(c.id)!)} h` : "—"}</TableCell>
                   <TableCell>
                     <Link href={`/painel/clientes/${c.id}`} className="text-sm text-muted-foreground hover:text-foreground">
                       Editar

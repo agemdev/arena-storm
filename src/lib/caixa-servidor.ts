@@ -143,3 +143,15 @@ export async function clientesComSaldo(supabase: SupabaseClient): Promise<ComSal
     .map((s) => ({ id: s.cliente_id as string, nome: nome.get(s.cliente_id) ?? "?", saldo: Number(s.saldo) }))
     .sort((x, y) => y.saldo - x.saldo);
 }
+
+// Clientes com saldo no pacote de horas (saldo em minutos de jogo)
+export async function clientesComPacote(supabase: SupabaseClient): Promise<ComSaldo[]> {
+  const { data: saldos } = await supabase.from("pacote_saldos").select("cliente_id, saldo").gt("saldo", 0);
+  const ids = (saldos ?? []).map((s) => s.cliente_id);
+  if (!ids.length) return [];
+  const { data: nomes } = await supabase.from("clientes").select("id, nome").in("id", ids);
+  const nome = new Map((nomes ?? []).map((c) => [c.id, c.nome]));
+  return (saldos ?? [])
+    .map((s) => ({ id: s.cliente_id as string, nome: nome.get(s.cliente_id) ?? "?", saldo: Number(s.saldo) }))
+    .sort((x, y) => y.saldo - x.saldo);
+}
