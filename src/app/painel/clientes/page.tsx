@@ -1,9 +1,11 @@
 import { duracao } from "@/lib/caixa";
+import { fiadosAbertos } from "@/lib/caixa-servidor";
 import { Suspense } from "react";
 import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
 import { listarCidadesDoEstado, listarEstados } from "@/lib/locais";
 import { formatarWhats } from "@/lib/whatsapp";
+import { reais } from "@/lib/formatos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -77,6 +79,9 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
     ? await supabase.from("pacote_saldos").select("cliente_id, saldo").in("cliente_id", clientes.map((c) => c.id))
     : { data: [] };
   const pacoteDe = new Map((pacotes ?? []).map((s) => [s.cliente_id, Number(s.saldo)]));
+  // Fiado em aberto de cada cliente
+  const fiadoDe = new Map<string, number>();
+  if (clientes?.length) for (const f of await fiadosAbertos(supabase, clientes.map((c) => c.id))) fiadoDe.set(f.clienteId, (fiadoDe.get(f.clienteId) ?? 0) + f.falta);
 
   return (
     <Card>
@@ -98,6 +103,7 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
                 <TableHead className="hidden md:table-cell">Cidade</TableHead>
                 <TableHead className="text-right">Minutos</TableHead>
                 <TableHead className="text-right">Pacote</TableHead>
+                <TableHead className="text-right">Fiado</TableHead>
                 <TableHead className="w-0" />
               </TableRow>
             </TableHeader>
@@ -120,6 +126,7 @@ async function Lista({ searchParams }: { searchParams: Busca }) {
                   </TableCell>
                   <TableCell className="text-right font-medium text-cyan">{saldoDe.get(c.id) ?? 0}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{pacoteDe.get(c.id) ? `${duracao(pacoteDe.get(c.id)!)} h` : "—"}</TableCell>
+                  <TableCell className="text-right font-medium text-purple">{fiadoDe.get(c.id) ? reais(fiadoDe.get(c.id)!) : "—"}</TableCell>
                   <TableCell>
                     <Link href={`/painel/clientes/${c.id}`} className="text-sm text-muted-foreground hover:text-foreground">
                       Editar

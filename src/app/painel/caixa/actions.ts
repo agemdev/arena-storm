@@ -13,7 +13,7 @@ import {
   totais,
   type AtendimentoLinha,
 } from "@/lib/caixa";
-import { encerrarVencidos } from "@/lib/caixa-servidor";
+import { encerrarVencidos, fiadosAbertos } from "@/lib/caixa-servidor";
 
 export type Resultado = { ok: boolean; msg: string; n?: number; abrir?: string } | null;
 
@@ -332,4 +332,49 @@ async function estornarCompraPacote(supabase: Awaited<ReturnType<typeof exigirAd
     await supabase.from("pacote_lancamentos").insert({ arena_id: c.arena_id, cliente_id: c.cliente_id, minutos: -creditado, motivo: "estorno", plano_id: c.plano_id, atendimento_id: atendimentoId, obs: "Venda do pacote cancelada" });
   if (sinal === 1 && creditado <= 0)
     await supabase.from("pacote_lancamentos").insert({ arena_id: c.arena_id, cliente_id: c.cliente_id, minutos: c.minutos, motivo: "compra", plano_id: c.plano_id, atendimento_id: atendimentoId, obs: "Cancelamento desfeito" });
+}
+
+// Fiado: pendura o que falta na conta do cliente cadastrado (sai do "a receber" do dia)
+export async function colocarFiado(form: FormData) {
+  const { supabase } = await exigirAdmin();
+  const id = String(form.get("id"));
+  const { data } = await supabase.from("atendimentos").select(SELECT_ATENDIMENTO).eq("id", id).single();
+  if (!data) return;
+  const a = data as unknown as AtendimentoLinha;
+  const t = totais(a);
+  if (!a.cliente_id || t.emUso || t.cancelado || t.falta <= 0) return;
+  await supabase.from("atendimentos").update({ fiado_em: new Date().toISOString() }).eq("id", id);
+  atualizar();
+}
+
+export async function tirarFiado(form: FormData) {
+  const { supabase } = await exigirAdmin();
+  await supabase.from("atendimentos").update({ fiado_em: null }).eq("id", String(form.get("id")));
+  atualizar();
+}
+
+// Receber fiado: paga do mais antigo para o mais novo (pode ser parte da dívida)
+export async function receberFiado(_: Resultado, form: FormData): Promise<Resultado> {
+  const { supabase, arenaId } = await exigirAdmin();
+  const clienteId = String(form.get("cliente_id"));
+  const forma = String(form.get("forma"));
+  let resta = lerValor(String(form.get("valor") ?? ""));
+  if (!["dinheiro", "pix", "cartao"].includes(forma)) return { ok: false, msg: "Escolha dinheiro, Pix ou cartão." };
+  if (!(resta > 0)) return { ok: false, msg: "Digite o valor recebido." };
+
+  const abertos = await fiadosAbertos(supabase, [clienteId]);
+  const divida = Math.round(abertos.reduce((s, f) => s + f.falta, 0) * 100) / 100;
+  if (!abertos.length) return { ok: false, msg: "Este cliente não tem fiado em aberto." };
+  if (resta > divida + 0.001) return { ok: false, msg: `Valor maior que a dívida (${divida.toFixed(2).replace(".", ",")}).` };
+
+  for (const f of abertos) {
+    if (resta <= 0) break;
+    const valor = Math.round(Math.min(resta, f.falta) * 100) / 100;
+    const { error } = await supabase.from("pagamentos").insert({ arena_id: arenaId, atendimento_id: f.id, forma, valor });
+    if (error) return { ok: false, msg: "Erro ao registrar o pagamento." };
+    resta = Math.round((resta - valor) * 100) / 100;
+  }
+  atualizar();
+  const sobra = Math.round((divida - lerValor(String(form.get("valor")))) * 100) / 100;
+  return { ok: true, msg: sobra > 0 ? `Recebido! Ainda falta ${sobra.toFixed(2).replace(".", ",")}.` : "Fiado quitado!", n: Date.now() };
 }

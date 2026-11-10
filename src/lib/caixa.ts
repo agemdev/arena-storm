@@ -93,6 +93,7 @@ export type AtendimentoLinha = {
   cancelado_motivo: string | null;
   minutos_de: string | null; // pagar com minutos deste cliente (desconta ao encerrar)
   pacote_de: string | null; // usar o pacote de horas deste cliente (desconta ao encerrar)
+  fiado_em: string | null; // colocado no fiado (conta do cliente)
   criado_em: string;
   equipamentos: { nome: string } | null;
   consumos: { total: number }[];
@@ -110,12 +111,13 @@ export function totais(a: AtendimentoLinha) {
   const total = cancelado ? 0 : Math.max(0, valorUso + consumo + ajuste);
   const pago = a.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
   const falta = Math.round((total - pago) * 100) / 100;
-  const status = cancelado ? "cancelado" : emUso ? "em_uso" : falta > 0 ? "falta" : "pago";
-  return { cancelado, emUso, minutos: uso.minutos, valorUso, consumo, ajuste, total, pago, falta, status } as const;
+  const fiado = !!a.fiado_em && !cancelado && !emUso && falta > 0; // pendurado na conta do cliente
+  const status = cancelado ? "cancelado" : emUso ? "em_uso" : fiado ? "fiado" : falta > 0 ? "falta" : "pago";
+  return { cancelado, fiado, emUso, minutos: uso.minutos, valorUso, consumo, ajuste, total, pago, falta, status } as const;
 }
 
 export const SELECT_ATENDIMENTO =
-  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
+  "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, fiado_em, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
 
 // Aviso de tempo acabando: quantos minutos antes
 export const AVISO_MINUTOS = 5;
@@ -151,3 +153,8 @@ export const SITUACOES_MAQUINA = {
 
 // Cliente com saldo de minutos (para "usar minutos de...")
 export type ComSaldo = { id: string; nome: string; saldo: number };
+
+// Início e fim de um dia do caixa (para somar o que entrou naquele dia)
+export function limitesDoDia(data: string) {
+  return { de: `${data}T00:00:00${OFFSET}`, ate: `${somarDias(data, 1)}T00:00:00${OFFSET}` };
+}

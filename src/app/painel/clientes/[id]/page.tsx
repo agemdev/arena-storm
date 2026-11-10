@@ -8,6 +8,9 @@ import ClienteForm from "../ClienteForm";
 import DarMinutos from "./DarMinutos";
 import AjustarSaldo from "./AjustarSaldo";
 import VenderPacote from "./VenderPacote";
+import ReceberFiado from "./ReceberFiado";
+import { fiadosAbertos } from "@/lib/caixa-servidor";
+import { reais } from "@/lib/formatos";
 import { duracao, FUSO } from "@/lib/caixa";
 
 type Params = PageProps<"/painel/clientes/[id]">["params"];
@@ -47,7 +50,7 @@ async function Formulario({ params }: { params: Params }) {
   // Cliente antigo sem cidade → usa a cidade padrão da arena
   const uf = c.cidades?.uf ?? cidadePadrao.uf;
   const cidadeId = c.cidade_id ?? cidadePadrao.id;
-  const [estados, cidades, extrato, extratoPacote, pacotes] = await Promise.all([
+  const [estados, cidades, extrato, extratoPacote, pacotes, fiados] = await Promise.all([
     listarEstados(),
     listarCidadesDoEstado(uf),
     supabase
@@ -61,7 +64,9 @@ async function Formulario({ params }: { params: Params }) {
       .eq("cliente_id", c.id)
       .order("criado_em", { ascending: false }),
     supabase.from("planos").select("id, nome, preco, pacote_minutos").eq("ativo", true).not("pacote_minutos", "is", null).order("ordem"),
+    fiadosAbertos(supabase, [c.id]),
   ]);
+  const divida = Math.round(fiados.reduce((s, f) => s + f.falta, 0) * 100) / 100;
   const lancamentos = extrato.data ?? [];
   const saldo = lancamentos.reduce((s, l) => s + l.minutos, 0);
   const lancPacote = extratoPacote.data ?? [];
@@ -87,6 +92,34 @@ async function Formulario({ params }: { params: Params }) {
             uf={uf}
             cidadeId={cidadeId}
           />
+        </CardContent>
+      </Card>
+
+      {/* Fiado: o que o cliente pendurou */}
+      <Card className={divida > 0 ? "border-purple/50" : ""}>
+        <CardHeader>
+          <CardTitle>
+            📒 Fiado · <span className={divida > 0 ? "text-purple" : "text-muted-foreground"}>{reais(divida)}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {fiados.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nada no fiado. Para pendurar, use “Colocar no fiado” no atendimento do Caixa.</p>
+          ) : (
+            <>
+              <ul className="divide-y divide-border text-sm">
+                {fiados.map((f) => (
+                  <li key={f.id} className="flex items-center justify-between gap-3 py-1.5">
+                    <Link href={`/painel/caixa?data=${f.data}&abrir=${f.id}`} className="text-muted-foreground hover:text-foreground">
+                      {dataCurta(f.data)} · total {reais(f.total)}
+                    </Link>
+                    <span className="font-medium text-purple">falta {reais(f.falta)}</span>
+                  </li>
+                ))}
+              </ul>
+              <ReceberFiado clienteId={c.id} divida={divida} />
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -176,3 +209,8 @@ const MOTIVOS = {
   ajuste: "✏️ Ajuste",
   promocao: "🎁 Promoção",
 };
+
+// "2026-11-09" → "09/11"
+function dataCurta(d: string) {
+  return `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+}

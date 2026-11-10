@@ -92,7 +92,7 @@ export async function estadoMaquinas(supabase: SupabaseClient) {
   const pendentes = new Map<string, { id: string; nome: string; falta: number }>();
   for (const f of (fechados.data ?? []) as unknown as AtendimentoLinha[]) {
     const t = totais(f);
-    if (t.falta > 0 && !pendentes.has(f.equipamento_id!)) pendentes.set(f.equipamento_id!, { id: f.id, nome: f.nome, falta: t.falta });
+    if (t.falta > 0 && !t.fiado && !pendentes.has(f.equipamento_id!)) pendentes.set(f.equipamento_id!, { id: f.id, nome: f.nome, falta: t.falta });
   }
   const abertosLista = abertos.data ?? [];
   const porMaquina = new Map(abertosLista.filter((a) => a.equipamento_id).map((a) => [a.equipamento_id as string, a]));
@@ -154,4 +154,23 @@ export async function clientesComPacote(supabase: SupabaseClient): Promise<ComSa
   return (saldos ?? [])
     .map((s) => ({ id: s.cliente_id as string, nome: nome.get(s.cliente_id) ?? "?", saldo: Number(s.saldo) }))
     .sort((x, y) => y.saldo - x.saldo);
+}
+
+export type FiadoAberto = { id: string; data: string; nome: string; clienteId: string; falta: number; total: number; fiadoEm: string };
+
+// Fiados em aberto (de um cliente ou de todos), do mais antigo para o mais novo
+export async function fiadosAbertos(supabase: SupabaseClient, clienteIds?: string[]): Promise<FiadoAberto[]> {
+  let q = supabase
+    .from("atendimentos")
+    .select(SELECT_ATENDIMENTO)
+    .not("fiado_em", "is", null)
+    .is("cancelado_em", null)
+    .order("data")
+    .order("criado_em");
+  if (clienteIds) q = q.in("cliente_id", clienteIds);
+  const { data } = await q;
+  return ((data ?? []) as unknown as AtendimentoLinha[])
+    .map((a) => ({ a, t: totais(a) }))
+    .filter(({ t }) => t.fiado)
+    .map(({ a, t }) => ({ id: a.id, data: a.data, nome: a.nome, clienteId: a.cliente_id!, falta: t.falta, total: t.total, fiadoEm: a.fiado_em! }));
 }

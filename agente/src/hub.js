@@ -111,6 +111,7 @@ class Hub extends EventEmitter {
           .select("id, nome, equipamento_id, valor_uso, ajuste, consumos(total), pagamentos(valor)")
           .not("fim", "is", null)
           .is("cancelado_em", null)
+          .is("fiado_em", null) // fiado: já está na conta do cliente, libera o PC
           .not("equipamento_id", "is", null)
           .gte("data", diaISO(2))
           .order("fim", { ascending: false }),

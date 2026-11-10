@@ -8,6 +8,7 @@ import {
   FORMAS,
   hhmm,
   hojeISO,
+  limitesDoDia,
   SELECT_ATENDIMENTO,
   SITUACOES_MAQUINA,
   somarDias,
@@ -42,6 +43,7 @@ const STATUS = {
   em_uso: { texto: "Em uso", cor: "bg-cyan/15 text-cyan" },
   falta: { texto: "A receber", cor: "bg-amber/15 text-amber" },
   pago: { texto: "Pago", cor: "bg-green/15 text-green" },
+  fiado: { texto: "📒 Fiado", cor: "bg-purple/15 text-purple" },
   cancelado: { texto: "Cancelado", cor: "bg-destructive/15 text-destructive" },
 };
 
@@ -61,7 +63,7 @@ function ordenar(linhas: Linha[], ordem: Ordem) {
   const grupo = (l: Linha) => {
     if (l.t.cancelado) return 9; // cancelados sempre no fim
     if (ordem === "acabando") return l.t.emUso ? (l.a.fim_previsto ? 0 : 1) : 2;
-    if (ordem === "receber") return l.t.falta > 0 ? 0 : 1;
+    if (ordem === "receber") return l.t.falta > 0 && !l.t.fiado ? 0 : l.t.fiado ? 1 : 2;
     return 0;
   };
   return [...linhas].sort((x, y) => {
@@ -112,9 +114,22 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
     ordem,
   );
   const totalDia = linhas.reduce((s, l) => s + l.t.total, 0);
-  const aReceber = linhas.reduce((s, l) => s + Math.max(0, l.t.falta), 0);
+  const aReceber = linhas.reduce((s, l) => s + (l.t.fiado ? 0 : Math.max(0, l.t.falta)), 0);
+  const fiadoDia = linhas.reduce((s, l) => s + (l.t.fiado ? l.t.falta : 0), 0);
+  // Dinheiro/Pix/Cartão = o que ENTROU neste dia (inclui fiado de outros dias pago hoje)
+  const lim = limitesDoDia(data);
+  const { data: pagosDia } = await supabase
+    .from("pagamentos")
+    .select("forma, valor, atendimentos(data, fiado_em)")
+    .gte("criado_em", lim.de)
+    .lt("criado_em", lim.ate);
   const porForma = Object.fromEntries(Object.keys(FORMAS).map((f) => [f, 0])) as Record<Forma, number>;
-  atendimentos.forEach((a) => a.pagamentos.forEach((p) => (porForma[p.forma] += Number(p.valor))));
+  let fiadoRecebido = 0;
+  for (const p of pagosDia ?? []) {
+    porForma[p.forma as Forma] += Number(p.valor);
+    const at = p.atendimentos as unknown as { data: string; fiado_em: string | null } | null;
+    if (at?.fiado_em && at.data !== data) fiadoRecebido += Number(p.valor);
+  }
   const emUso = linhas.filter((l) => l.t.emUso).length;
 
   return (
@@ -160,7 +175,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
       </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Resumo titulo="Total do dia" valor={reais(totalDia)} destaque />
         <Resumo titulo="Dinheiro" valor={reais(porForma.dinheiro)} />
         <Resumo titulo="Pix" valor={reais(porForma.pix)} />
@@ -168,6 +183,8 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
         <Resumo titulo="Pago em minutos" valor={reais(porForma.minutos)} />
         <Resumo titulo="Pago com pacote" valor={reais(porForma.pacote)} />
         <Resumo titulo="A receber" valor={reais(aReceber)} alerta={aReceber > 0} />
+        <Resumo titulo="📒 Fiado do dia" valor={reais(fiadoDia)} />
+        <Resumo titulo="Fiado recebido" valor={reais(fiadoRecebido)} />
         <Resumo titulo="Máquinas em uso" valor={String(emUso)} />
       </div>
 

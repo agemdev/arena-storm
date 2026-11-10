@@ -3,6 +3,7 @@ import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
 import { reais } from "@/lib/formatos";
 import { hhmm, hojeISO, SELECT_ATENDIMENTO, totais, type AtendimentoLinha } from "@/lib/caixa";
+import { fiadosAbertos } from "@/lib/caixa-servidor";
 import { janelaDoDia, SELECT_AGENDA, SITUACOES, TIPOS_AGENDA, type AgendaLinha } from "@/lib/agenda";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AoVivo from "@/components/painel/AoVivo";
@@ -28,7 +29,8 @@ async function Resumo() {
   const lista = ((hoje.data ?? []) as unknown as AtendimentoLinha[]).map(totais);
   const totalHoje = lista.reduce((s, t) => s + t.total, 0);
   const emUso = lista.filter((t) => t.emUso).length;
-  const aReceber = lista.reduce((s, t) => s + Math.max(0, t.falta), 0);
+  const aReceber = lista.reduce((s, t) => s + (t.fiado ? 0 : Math.max(0, t.falta)), 0);
+  const fiadoTotal = (await fiadosAbertos(supabase)).reduce((s, f) => s + f.falta, 0);
 
   return (
     <div className="space-y-6">
@@ -39,6 +41,7 @@ async function Resumo() {
         <Cartao href="/painel/caixa" titulo="Máquinas em uso" valor={String(emUso)} />
         <Cartao href="/painel/caixa" titulo="A receber hoje" valor={reais(aReceber)} />
         <Cartao href="/painel/clientes" titulo="Clientes cadastrados" valor={String(clientes.count ?? 0)} />
+        <Cartao href="/painel/clientes" titulo="📒 Fiado em aberto (total)" valor={reais(fiadoTotal)} />
       </div>
 
       {/* Agenda de hoje (o que ainda vai acontecer) */}

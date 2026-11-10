@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
 import { reais } from "@/lib/formatos";
-import { duracao, FORMAS, hhmm, totais, type AtendimentoLinha, type Forma } from "@/lib/caixa";
+import { duracao, FORMAS, FUSO, hhmm, totais, type AtendimentoLinha, type Forma } from "@/lib/caixa";
 import { Button } from "@/components/ui/button";
 import Janela from "@/components/painel/Janela";
 import UsoAoVivo from "@/components/painel/UsoAoVivo";
 import {
   adicionarConsumo,
+  colocarFiado,
+  tirarFiado,
   desfazerCancelamento,
   encerrarAtendimento,
   estenderTempo,
@@ -32,7 +34,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
   const { data } = await supabase
     .from("atendimentos")
     .select(
-      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em, minutos_pacote, clientes(nome))",
+      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, fiado_em, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em, minutos_pacote, clientes(nome))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -241,10 +243,35 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                   <Linha rotulo="Pago" valor={reais(t.pago)} />
                 </dl>
                 <div className={`rounded-xl p-3 text-center ${t.falta > 0 ? "bg-amber/10 text-amber" : "bg-green/10 text-green"}`}>
-                  <p className="text-xs">{t.falta > 0 ? "Falta receber" : t.falta < 0 ? "Troco / pago a mais" : "Tudo pago"}</p>
+                  <p className="text-xs">{t.fiado ? "No fiado (falta)" : t.falta > 0 ? "Falta receber" : t.falta < 0 ? "Troco / pago a mais" : "Tudo pago"}</p>
                   <p className="font-display text-2xl font-bold">{reais(Math.abs(t.falta))}</p>
                 </div>
                 {t.emUso && <p className="text-xs text-muted-foreground">Ainda em uso: encerre antes de receber o valor final.</p>}
+                {/* Fiado: pendura na conta do cliente cadastrado */}
+                {t.fiado ? (
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-purple/40 bg-purple/10 p-2 text-sm text-purple">
+                    <span className="flex-1">📒 No fiado desde {new Date(a.fiado_em!).toLocaleDateString("pt-BR", { timeZone: FUSO })}</span>
+                    <form action={tirarFiado}>
+                      <input type="hidden" name="id" value={a.id} />
+                      <button type="submit" className="text-xs underline">
+                        Tirar do fiado
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  !t.emUso &&
+                  t.falta > 0 &&
+                  (a.cliente_id ? (
+                    <form action={colocarFiado}>
+                      <input type="hidden" name="id" value={a.id} />
+                      <Button type="submit" variant="outline" className="w-full border-purple/50 text-purple">
+                        📒 Colocar no fiado ({reais(t.falta)})
+                      </Button>
+                    </form>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Fiado só para cliente cadastrado.</p>
+                  ))
+                )}
                 {!t.emUso && <AjustarValor id={a.id} calculado={t.valorUso + t.consumo} total={t.total} temAjuste={t.ajuste !== 0} />}
                 <Receber atendimentoId={a.id} falta={t.falta} clienteId={a.cliente_id} minutosDe={a.minutos_de} comSaldo={comSaldo} pacoteDe={a.pacote_de} comPacote={comPacote} valorHora={Number(a.valor_hora)} />
 
