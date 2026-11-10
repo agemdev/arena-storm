@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <title>Arena Storm</title>
+    <link rel="stylesheet" href="estilo.css" />
+    <style>
+      body {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        text-align: center;
+        background: radial-gradient(circle at 50% 35%, #1a1033 0%, var(--fundo) 60%);
+        cursor: default;
+      }
+      img {
+        width: 180px;
+        border-radius: 32px;
+        box-shadow: 0 0 60px #7c3aed66;
+      }
+      h1 {
+        font-size: 44px;
+        letter-spacing: 1px;
+      }
+      .maquina {
+        font-size: 28px;
+        color: var(--ciano);
+        font-weight: 700;
+      }
+      .chamar {
+        font-size: 22px;
+        padding: 14px 28px;
+        border: 2px solid var(--roxo);
+        border-radius: 14px;
+        color: var(--roxo);
+      }
+      .rodape {
+        position: fixed;
+        bottom: 18px;
+        font-size: 14px;
+        color: var(--apagado);
+      }
+      .hora {
+        font-size: 64px;
+        font-weight: 200;
+      }
+    </style>
+  </head>
+  <body>
+    <img src="../../assets/logo.jpg" alt="" />
+    <h1 id="arena">Arena Storm</h1>
+    <div class="maquina" id="maquina"></div>
+    <div class="hora" id="hora"></div>
+    <div class="chamar" id="msg">🎮 Chame o atendente para liberar</div>
+    <div class="rodape" id="rodape"></div>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      window.arena.on("dados", (d) => {
+        $("arena").textContent = d.arena?.nome ?? "Arena Storm";
+        $("maquina").textContent = d.maquina ? `${d.maquina} · Livre` : "";
+        $("hora").textContent = new Date(d.agora).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        $("msg").textContent = d.modo === "configurar" ? "⚙️ Configurando este PC (Ctrl + Alt + Shift + A)" : "🎮 Chame o atendente para liberar";
+        $("rodape").textContent = d.conectado ? "" : "Procurando o Servidor da arena...";
+      });
+    </script>
+  </body>
+</html>

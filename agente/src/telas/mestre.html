@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <title>Acesso mestre</title>
+    <link rel="stylesheet" href="estilo.css" />
+    <style>
+      body {
+        padding: 22px;
+        border: 1px solid var(--borda);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        overflow-y: auto;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        -webkit-app-region: drag;
+      }
+      header img {
+        width: 36px;
+        border-radius: 8px;
+      }
+      header h2 {
+        flex: 1;
+        font-size: 18px;
+      }
+      header button {
+        -webkit-app-region: no-drag;
+        padding: 4px 10px;
+      }
+      .grade {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .info {
+        font-size: 13px;
+        background: var(--cartao);
+        border: 1px solid var(--borda);
+        border-radius: 10px;
+        padding: 10px 12px;
+        line-height: 1.6;
+      }
+      h3 {
+        font-size: 13px;
+        color: var(--apagado);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 4px;
+      }
+      .escondido {
+        display: none !important;
+      }
+      #msg {
+        min-height: 20px;
+        font-size: 14px;
+      }
+      .linha {
+        display: flex;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="../../assets/logo.jpg" alt="" />
+      <h2>Acesso mestre</h2>
+      <button id="fechar" title="Fechar">✕</button>
+    </header>
+
+    <!-- 1) Senha -->
+    <form id="telaSenha">
+      <label for="senha">Senha mestre (definida no painel)</label>
+      <div class="linha">
+        <input id="senha" type="password" autofocus />
+        <button class="principal" type="submit">Entrar</button>
+      </div>
+    </form>
+
+    <!-- 2) Escolher qual máquina é este PC -->
+    <div id="telaEscolher" class="escondido">
+      <h3>Qual máquina é este PC?</h3>
+      <select id="maquina" size="10"></select>
+      <button class="principal" id="salvarMaquina" style="margin-top: 10px; width: 100%">Salvar</button>
+    </div>
+
+    <!-- 3) Menu -->
+    <div id="telaMenu" class="escondido" style="display: flex; flex-direction: column; gap: 12px">
+      <div class="info" id="info"></div>
+
+      <h3>Liberar sem cobrança</h3>
+      <input id="obs" placeholder="Observação (opcional). Ex.: troca de fonte" maxlength="120" />
+      <div class="grade">
+        <button data-situacao="manutencao">🔧 Manutenção</button>
+        <button data-situacao="funcionario">👤 Funcionário</button>
+        <button data-situacao="sem_cobranca">🎁 Uso sem cobrança</button>
+        <button data-situacao="normal" class="principal">✓ Voltar ao normal</button>
+      </div>
+
+      <h3>Este PC</h3>
+      <div class="grade">
+        <button id="trocarMaquina">🖥️ Trocar a máquina</button>
+        <button id="trocarServidor">🔌 Endereço do Servidor</button>
+      </div>
+      <div class="linha escondido" id="linhaIp">
+        <input id="ip" placeholder="IP do Servidor (vazio = procurar sozinho)" />
+        <button id="salvarIp">OK</button>
+      </div>
+
+      <h3>Programa</h3>
+      <div class="grade">
+        <button id="desativarAgora">⏸ Desativar até reiniciar</button>
+        <button id="desativarSempre">⏹ Desativar de vez</button>
+        <button id="reativar" class="principal escondido">▶ Reativar</button>
+        <button id="desinstalar" class="perigo">🗑 Desinstalar</button>
+        <button id="sairPrograma">✕ Fechar o programa</button>
+      </div>
+    </div>
+
+    <p id="msg"></p>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const inicio = new URLSearchParams(location.search).get("inicio") ?? "senha";
+      let resumo = null;
+
+      const mensagem = (texto, ok) => {
+        $("msg").textContent = texto ?? "";
+        $("msg").className = ok ? "ok" : "erro";
+      };
+      const acao = async (dados) => {
+        const r = await window.arena.invocar("mestre:acao", dados);
+        mensagem(r.msg, r.ok);
+        if (r.ok && dados.acao !== "entrar") await atualizar();
+        return r;
+      };
+      const mostrar = (tela) => {
+        for (const t of ["telaSenha", "telaEscolher", "telaMenu"]) $(t).classList.toggle("escondido", t !== tela);
+      };
+
+      async function atualizar() {
+        resumo = await window.arena.invocar("mestre:acao", { acao: "resumo" });
+        const nomes = { normal: "Normal", manutencao: "Manutenção", funcionario: "Funcionário", sem_cobranca: "Uso sem cobrança" };
+        const linhas = [
+          `Máquina: ${resumo.maquina ?? "(não escolhida)"}`,
+          `Situação: ${nomes[resumo.situacao] ?? resumo.situacao}`,
+          `Servidor: ${resumo.conectado ? "conectado" : "desconectado"}${resumo.hubIp ? ` (${resumo.hubIp})` : ""}`,
+          `Programa: ${resumo.desativado ? "DESATIVADO" : "ativo"} · v${resumo.versao} · ${resumo.nomePc}`,
+        ];
+        $("info").replaceChildren(...linhas.flatMap((l, i) => (i ? [document.createElement("br"), l] : [l])));
+        $("reativar").classList.toggle("escondido", !resumo.desativado);
+        $("desativarAgora").classList.toggle("escondido", !!resumo.desativado);
+        $("desativarSempre").classList.toggle("escondido", resumo.desativado === "sempre");
+        // Lista de máquinas
+        const sel = $("maquina");
+        sel.replaceChildren(
+          ...resumo.maquinas.map((m) => {
+            const o = document.createElement("option");
+            o.value = m.id;
+            o.textContent = m.nome;
+            o.selected = m.id === resumo.equipamentoId;
+            return o;
+          }),
+        );
+      }
+
+      $("telaSenha").onsubmit = async (e) => {
+        e.preventDefault();
+        const r = await acao({ acao: "entrar", senha: $("senha").value });
+        if (!r.ok) return;
+        mensagem("");
+        await atualizar();
+        mostrar(inicio === "escolher" || !resumo.equipamentoId ? "telaEscolher" : "telaMenu");
+      };
+      $("salvarMaquina").onclick = async () => {
+        if (!$("maquina").value) return mensagem("Escolha uma máquina da lista.");
+        const r = await acao({ acao: "escolher", equipamentoId: $("maquina").value });
+        if (r.ok) mostrar("telaMenu");
+      };
+      document.querySelectorAll("[data-situacao]").forEach((b) => {
+        b.onclick = () => acao({ acao: "situacao", situacao: b.dataset.situacao, obs: $("obs").value });
+      });
+      $("trocarMaquina").onclick = () => mostrar("telaEscolher");
+      $("trocarServidor").onclick = () => {
+        $("linhaIp").classList.toggle("escondido");
+        $("ip").value = resumo?.hubIp ?? "";
+      };
+      $("salvarIp").onclick = () => acao({ acao: "servidor", ip: $("ip").value });
+      $("desativarAgora").onclick = () => acao({ acao: "desativar", ate: "reiniciar" });
+      $("desativarSempre").onclick = () => confirm("Desativar de vez? O PC fica sem bloqueio até reativar por aqui.") && acao({ acao: "desativar", ate: "sempre" });
+      $("reativar").onclick = () => acao({ acao: "reativar" });
+      $("desinstalar").onclick = () => confirm("Desinstalar o programa deste PC?") && acao({ acao: "desinstalar" });
+      $("sairPrograma").onclick = () => confirm("Fechar o programa? Ele volta ao reiniciar o PC.") && acao({ acao: "sair" });
+      $("fechar").onclick = () => window.arena.invocar("mestre:fechar");
+      document.addEventListener("keydown", (e) => e.key === "Escape" && window.arena.invocar("mestre:fechar"));
+      window.arena.on("mestre:erro", (m) => mensagem(m, false));
+      if (inicio === "escolher") mensagem("Primeira vez neste PC: digite a senha mestre e escolha a máquina.", true);
+    </script>
+  </body>
+</html>

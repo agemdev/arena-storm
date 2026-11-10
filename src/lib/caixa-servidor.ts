@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { pcLigado } from "@/lib/agentes";
 import { calcularUso, hhmm, hojeISO, SELECT_ATENDIMENTO, somarDias, totais, type AtendimentoLinha } from "@/lib/caixa";
 
 // Encerra os atendimentos cujo tempo combinado já acabou.
@@ -52,6 +53,7 @@ export type MaquinaEstado = {
   situacaoObs: string | null;
   situacaoDesde: string | null;
   aReceber: { id: string; nome: string; falta: number } | null; // tempo acabou e ainda não pagou
+  ligado: "ligado" | "desligado" | "desativado" | null; // null = sem programa instalado (ex.: PS5)
   reserva?: string; // "20:00"
   tv?: string; // nome de quem está usando a TV dividida
   atendimento: { id: string; nome: string; inicio: string; fim_previsto: string | null; valor_hora: number } | null;
@@ -59,7 +61,7 @@ export type MaquinaEstado = {
 
 // Situação de cada máquina agora: em uso (com o atendimento), reserva próxima e TV dividida
 export async function estadoMaquinas(supabase: SupabaseClient) {
-  const [equips, abertos, reservas, fechados] = await Promise.all([
+  const [equips, abertos, reservas, fechados, agentes, cfg] = await Promise.all([
     supabase
       .from("equipamentos")
       .select("id, nome, tipo, mapa_x, mapa_y, compartilha_com, icone, situacao, situacao_obs, situacao_desde")
@@ -81,7 +83,11 @@ export async function estadoMaquinas(supabase: SupabaseClient) {
       .not("equipamento_id", "is", null)
       .gte("data", somarDias(hojeISO(), -2))
       .order("fim", { ascending: false }),
+    supabase.from("agentes").select("equipamento_id, online, estado").not("equipamento_id", "is", null),
+    supabase.from("agente_config").select("hub_contato").maybeSingle(),
   ]);
+  const hub = cfg.data?.hub_contato ?? null;
+  const porAgente = new Map((agentes.data ?? []).map((g) => [g.equipamento_id as string, g]));
   const lista = equips.data ?? [];
   const pendentes = new Map<string, { id: string; nome: string; falta: number }>();
   for (const f of (fechados.data ?? []) as unknown as AtendimentoLinha[]) {
@@ -108,6 +114,12 @@ export async function estadoMaquinas(supabase: SupabaseClient) {
       situacaoObs: e.situacao_obs,
       situacaoDesde: e.situacao_desde,
       aReceber: pendentes.get(e.id) ?? null,
+      ligado: (() => {
+        const g = porAgente.get(e.id);
+        if (!g) return null;
+        if (g.estado === "desativado") return "desativado";
+        return pcLigado(g.online, hub) ? "ligado" : "desligado";
+      })(),
       reserva: reservas.get(e.id),
       tv: parceiro && porMaquina.has(parceiro) ? nome(parceiro) : undefined,
       atendimento: a ? { id: a.id, nome: a.nome, inicio: a.inicio as string, fim_previsto: a.fim_previsto, valor_hora: Number(a.valor_hora) } : null,

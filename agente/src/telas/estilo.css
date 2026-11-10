@@ -1,0 +1,82 @@
+/* Visual da Arena Storm (escuro neon) */
+:root {
+  --fundo: #07070c;
+  --cartao: #12121c;
+  --borda: #2a2a3d;
+  --texto: #f2f2f7;
+  --apagado: #9a9ab0;
+  --ciano: #22d3ee;
+  --roxo: #a78bfa;
+  --verde: #34d399;
+  --ambar: #fbbf24;
+  --vermelho: #ef4444;
+}
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+html,
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--texto);
+  user-select: none;
+}
+body {
+  background: var(--fundo);
+}
+body.transparente {
+  background: transparent;
+  overflow: hidden;
+}
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid var(--borda);
+  background: var(--cartao);
+  color: var(--texto);
+  padding: 10px 14px;
+  font-weight: 600;
+}
+button:hover {
+  border-color: var(--ciano);
+}
+button.principal {
+  background: var(--ciano);
+  color: #001018;
+  border-color: var(--ciano);
+}
+button.perigo {
+  border-color: var(--vermelho);
+  color: var(--vermelho);
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+input,
+select {
+  font: inherit;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--borda);
+  background: #0b0b13;
+  color: var(--texto);
+  user-select: text;
+}
+label {
+  display: block;
+  font-size: 13px;
+  color: var(--apagado);
+  margin-bottom: 6px;
+}
+.ok {
+  color: var(--verde);
+}
+.erro {
+  color: var(--vermelho);
+}
+.apagado {
+  color: var(--apagado);
+}

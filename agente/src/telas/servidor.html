@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <title>Arena Storm — Servidor</title>
+    <link rel="stylesheet" href="estilo.css" />
+    <style>
+      body {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        height: 100vh;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      header img {
+        width: 44px;
+        border-radius: 10px;
+      }
+      header div {
+        flex: 1;
+      }
+      .cartao {
+        background: var(--cartao);
+        border: 1px solid var(--borda);
+        border-radius: 14px;
+        padding: 14px 16px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      td,
+      th {
+        text-align: left;
+        padding: 6px 4px;
+        border-bottom: 1px solid var(--borda);
+      }
+      th {
+        color: var(--apagado);
+        font-weight: 600;
+      }
+      #log {
+        flex: 1;
+        overflow-y: auto;
+        font: 12px Consolas, monospace;
+        color: var(--apagado);
+        white-space: pre-wrap;
+      }
+      .escondido {
+        display: none !important;
+      }
+      form {
+        display: grid;
+        gap: 12px;
+        max-width: 360px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <img src="../../assets/logo.jpg" alt="" />
+      <div>
+        <h2 id="titulo">Servidor da arena</h2>
+        <span class="apagado" id="sub">Iniciando...</span>
+      </div>
+      <button id="sair" class="escondido">Sair do login</button>
+    </header>
+
+    <!-- Login (só na primeira vez; a senha não fica salva) -->
+    <form id="login" class="cartao escondido">
+      <p>Entre com o <b>login do Servidor</b> (criado no painel do Supabase).</p>
+      <div>
+        <label for="email">E-mail</label>
+        <input id="email" type="email" required />
+      </div>
+      <div>
+        <label for="senha">Senha</label>
+        <input id="senha" type="password" required />
+      </div>
+      <button class="principal" type="submit">Entrar</button>
+      <p id="erroLogin" class="erro"></p>
+    </form>
+
+    <div id="painel" class="escondido" style="display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0">
+      <div class="cartao" id="nuvem"></div>
+      <div class="cartao">
+        <table>
+          <thead>
+            <tr><th>PC</th><th>Máquina</th><th>Situação</th><th>IP</th></tr>
+          </thead>
+          <tbody id="pcs"></tbody>
+        </table>
+      </div>
+      <div class="cartao" id="log"></div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const MODOS = { livre: "🔒 Livre (bloqueado)", uso: "🎮 Em uso", acabou: "⛔ Acabou", liberado: "🔧 Liberado" };
+
+      window.arena.on("servidor:login", () => {
+        $("login").classList.remove("escondido");
+        $("sub").textContent = "Faça o login para ligar o Servidor.";
+      });
+      window.arena.on("servidor:erro", (m) => ($("sub").textContent = m));
+      $("login").onsubmit = async (e) => {
+        e.preventDefault();
+        $("erroLogin").textContent = "Entrando...";
+        const r = await window.arena.invocar("servidor:entrar", { email: $("email").value, senha: $("senha").value });
+        if (!r.ok) return ($("erroLogin").textContent = r.msg);
+        $("login").classList.add("escondido");
+      };
+      $("sair").onclick = () => confirm("Sair do login? O Servidor para até entrar de novo.") && window.arena.invocar("servidor:sair");
+
+      window.arena.on("servidor:status", (s) => {
+        $("painel").classList.remove("escondido");
+        $("sair").classList.remove("escondido");
+        $("titulo").textContent = `Servidor · ${s.arena?.nome ?? ""}`;
+        $("sub").textContent = s.email ? `Conectado como ${s.email}` : "";
+        $("nuvem").textContent = s.nuvem
+          ? `🟢 Nuvem conectada · ${s.pcs.length} PC(s) na rede${s.fila ? ` · ${s.fila} ação(ões) esperando envio` : ""}`
+          : `🔴 Sem nuvem (internet?) — os PCs continuam com o último estado. ${s.erro ?? ""}`;
+        $("pcs").replaceChildren(
+          ...s.pcs.map((p) => {
+            const tr = document.createElement("tr");
+            for (const v of [p.nomePc, p.maquina, p.estado === "desativado" ? "⏸ Desativado" : (MODOS[p.modo] ?? "—"), p.ip?.replace("::ffff:", "")]) {
+              const td = document.createElement("td");
+              td.textContent = v ?? "";
+              tr.append(td);
+            }
+            return tr;
+          }),
+        );
+      });
+      window.arena.on("servidor:log", (l) => {
+        const log = $("log");
+        log.textContent = `${l}\n${log.textContent}`.slice(0, 8000);
+      });
+    </script>
+  </body>
+</html>

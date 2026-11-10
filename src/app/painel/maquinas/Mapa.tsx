@@ -48,6 +48,8 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
 
   const livres = maquinas.filter((m) => !m.emUso && !m.aReceber && m.situacao === "normal").length;
   const ocupadas = maquinas.filter((m) => m.emUso).length;
+  const comPrograma = maquinas.filter((m) => m.ligado !== null);
+  const ligadas = comPrograma.filter((m) => m.ligado === "ligado").length;
 
   return (
     <div className={`space-y-6 ${abrindo ? "cursor-wait" : ""}`}>
@@ -55,6 +57,12 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="font-semibold">
           <span className="text-green">{livres} livres</span> · <span className="text-cyan">{ocupadas} em uso</span>
+          {comPrograma.length > 0 && (
+            <span className="text-muted-foreground">
+              {" "}
+              · 🟢 {ligadas}/{comPrograma.length} PCs ligados
+            </span>
+          )}
         </span>
         <Legenda cor="border-green bg-green/10" texto="Livre" />
         <Legenda cor="border-cyan bg-cyan/15" texto="Em uso" />
@@ -112,6 +120,7 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
                   situacaoObs: null,
                   situacaoDesde: null,
                   aReceber: null,
+                  ligado: null,
                   atendimento: a,
                 }}
                 onClick={() => abrir(a.id)}
@@ -219,7 +228,16 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
 
   return (
     <button type="button" onClick={onClick} className={`flex h-full min-h-[7em] w-full min-w-0 flex-col items-start gap-[0.3em] overflow-hidden rounded-[0.8em] border-2 p-[0.7em] text-left transition ${cor}`}>
-      <span className="flex w-full items-start gap-1.5">
+      <span className="relative flex w-full items-start gap-1.5 pr-[0.9em]">
+        {/* Ligado / desligado (só PCs com o programa) */}
+        {m.ligado && (
+          <span
+            className={`absolute top-[0.15em] right-0 size-[0.65em] rounded-full ${
+              m.ligado === "ligado" ? "bg-green shadow-[0_0_6px] shadow-green" : m.ligado === "desativado" ? "bg-amber" : "bg-zinc-600 ring-1 ring-zinc-400"
+            }`}
+            title={m.ligado === "ligado" ? "PC ligado" : m.ligado === "desativado" ? "Programa desativado" : "PC desligado"}
+          />
+        )}
         <IconeMaquina icone={m.icone} tipo={m.tipo} className="mt-[0.1em] size-[1.1em] shrink-0 text-[1.05em] opacity-90" />
         <span className="line-clamp-2 min-w-0 text-[1em] leading-tight font-bold break-words">{m.nome}</span>
       </span>

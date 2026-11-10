@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" />
+    <link rel="stylesheet" href="estilo.css" />
+    <style>
+      /* Faixa fixa no topo: não bloqueia o jogo (o clique passa) */
+      .faixa {
+        height: 78px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        box-shadow: 0 6px 24px #0009;
+      }
+      .aviso {
+        background: var(--ambar);
+        color: #111;
+      }
+      .acabou {
+        background: var(--vermelho);
+        color: #fff;
+        animation: pisca 1.2s infinite;
+      }
+      @keyframes pisca {
+        50% {
+          background: #b91c1c;
+        }
+      }
+      .icone {
+        font-size: 36px;
+      }
+      small {
+        font-size: 17px;
+        font-weight: 600;
+        opacity: 0.9;
+      }
+    </style>
+  </head>
+  <body class="transparente">
+    <div class="faixa" id="faixa">
+      <span class="icone" id="icone"></span>
+      <span id="texto"></span>
+      <small id="sub"></small>
+    </div>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let ultimo = null;
+      // Bipes: 2 agudos no aviso, 3 graves quando acaba
+      function bipe(tipo) {
+        try {
+          const ctx = new AudioContext();
+          const [vezes, freq, dur] = tipo === "acabou" ? [3, 620, 0.35] : [2, 880, 0.2];
+          for (let i = 0; i < vezes; i++) {
+            const o = ctx.createOscillator();
+            o.frequency.value = freq;
+            o.connect(ctx.destination);
+            const t = ctx.currentTime + i * (dur + 0.15);
+            o.start(t);
+            o.stop(t + dur);
+          }
+        } catch {}
+      }
+      window.arena.on("dados", (d) => {
+        if (d.modo !== "aviso" && d.modo !== "acabou") return (ultimo = d.modo);
+        const f = $("faixa");
+        f.className = `faixa ${d.modo}`;
+        if (d.modo === "aviso") {
+          const min = Math.ceil(d.restaMs / 60000);
+          $("icone").textContent = "⏰";
+          $("texto").textContent = `FALTAM ${min} MIN · ${d.maquina}`;
+          $("sub").textContent = "Quer continuar? Fale com o atendente.";
+        } else {
+          $("icone").textContent = "⛔";
+          $("texto").textContent = `TEMPO ESGOTADO · ${d.maquina}`;
+          $("sub").textContent = "Procure o atendente para continuar ou fechar a conta.";
+        }
+        if (d.modo !== ultimo) bipe(d.modo);
+        ultimo = d.modo;
+      });
+    </script>
+  </body>
+</html>

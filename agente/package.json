@@ -1,0 +1,21 @@
+{
+  "name": "arena-storm-agente",
+  "productName": "Arena Storm",
+  "version": "0.1.0",
+  "description": "Programa dos PCs da Arena Storm (substitui o Gizmo)",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "pc": "electron . --modo=pc",
+    "servidor": "electron . --modo=servidor",
+    "start": "electron ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "bcryptjs": "^3.0.3",
+    "ws": "^8.22.2"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3"
+  }
+}

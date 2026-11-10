@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'" />
+    <link rel="stylesheet" href="estilo.css" />
+    <style>
+      /* Contador pequeno no canto (o clique passa para o jogo) */
+      .caixa {
+        margin: 4px;
+        height: 56px;
+        border-radius: 14px;
+        background: #07070cd9;
+        border: 1px solid #22d3ee88;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 14px;
+      }
+      .tempo {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--ciano);
+        font-variant-numeric: tabular-nums;
+      }
+      .rotulo {
+        font-size: 12px;
+        color: var(--apagado);
+        line-height: 1.2;
+      }
+      .off {
+        color: var(--ambar);
+      }
+    </style>
+  </head>
+  <body class="transparente">
+    <div class="caixa">
+      <span class="tempo" id="tempo"></span>
+      <span class="rotulo" id="rotulo"></span>
+    </div>
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const hm = (ms) => {
+        const m = Math.max(0, Math.round(ms / 60000));
+        return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
+      };
+      // Escreve as linhas sem usar HTML (seguro)
+      function rotulo(...linhas) {
+        const r = $("rotulo");
+        r.replaceChildren();
+        linhas.filter(Boolean).forEach((l, i) => {
+          if (i) r.append(document.createElement("br"));
+          const s = document.createElement("span");
+          s.textContent = l.texto ?? l;
+          if (l.classe) s.className = l.classe;
+          r.append(s);
+        });
+      }
+      window.arena.on("dados", (d) => {
+        const off = d.conectado ? null : { texto: "sem Servidor", classe: "off" };
+        if (d.modo === "liberado") {
+          $("tempo").textContent = "🔧";
+          rotulo(d.nomeSituacao ?? "Liberado", d.maquina, off);
+        } else if (d.restaMs != null) {
+          $("tempo").textContent = hm(d.restaMs);
+          rotulo("restantes", d.maquina, off);
+        } else {
+          $("tempo").textContent = hm(d.agora - new Date(d.inicio).getTime());
+          rotulo("tempo livre", d.maquina, off);
+        }
+      });
+    </script>
+  </body>
+</html>

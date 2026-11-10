@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+    <title>Arena Storm — Instalação</title>
+    <link rel="stylesheet" href="estilo.css" />
+    <style>
+      body {
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        align-items: center;
+        text-align: center;
+      }
+      img {
+        width: 84px;
+        border-radius: 18px;
+      }
+      .opcoes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        width: 100%;
+      }
+      .opcoes button {
+        padding: 18px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+      }
+      .opcoes small {
+        font-weight: 400;
+        color: var(--apagado);
+      }
+    </style>
+  </head>
+  <body>
+    <img src="../../assets/logo.jpg" alt="" />
+    <h2>Este computador é...</h2>
+    <div class="opcoes">
+      <button id="pc">🎮 PC de jogo<small>Bloqueia, mostra o tempo e avisa quando acaba</small></button>
+      <button id="servidor">🖥️ PC Servidor<small>Liga os PCs ao painel (só 1 na arena)</small></button>
+    </div>
+    <p class="apagado">Dá para mudar depois reinstalando o programa.</p>
+    <script>
+      document.getElementById("pc").onclick = () => window.arena.invocar("inicio:modo", "pc");
+      document.getElementById("servidor").onclick = () => window.arena.invocar("inicio:modo", "servidor");
+    </script>
+  </body>
+</html>

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseNavegador } from "@/lib/supabase/navegador";
 
-const TABELAS = ["atendimentos", "agendamento_maquinas", "equipamentos", "pagamentos"];
+const TABELAS = ["atendimentos", "agendamento_maquinas", "equipamentos", "pagamentos", "agentes"];
 
 // Quando o Caixa, a Agenda ou as máquinas mudam (em qualquer computador), recarrega os dados da tela
 export default function AoVivo() {
