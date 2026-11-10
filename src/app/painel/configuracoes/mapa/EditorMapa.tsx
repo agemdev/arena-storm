@@ -5,8 +5,10 @@ import { salvarMapa } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Input } from "@/components/ui/input";
+import IconeMaquina, { ICONES_MAQUINA } from "@/components/painel/IconeMaquina";
 
-type Maq = { id: string; nome: string; x: number | null; y: number | null; tv: string | null };
+type Maq = { id: string; nome: string; tipo: string; x: number | null; y: number | null; tv: string | null; icone: string | null };
 
 const COLUNAS = 12;
 const LINHAS = 6;
@@ -75,11 +77,18 @@ export default function EditorMapa({ inicial }: { inicial: Maq[] }) {
                   key={`${x}-${y}`}
                   type="button"
                   onClick={() => cliqueCelula(x, y)}
-                  className={`flex h-14 items-center justify-center rounded-lg border text-xs font-semibold ${
+                  className={`flex h-16 items-center justify-center rounded-lg border text-[11px] font-semibold ${
                     m ? (m.id === sel ? "border-cyan bg-cyan/25 text-cyan" : "border-green/60 bg-green/10") : "border-dashed border-border/60 text-transparent hover:border-cyan hover:text-muted-foreground"
                   }`}
                 >
-                  {m ? m.nome : "+"}
+                  {m ? (
+                    <span className="flex flex-col items-center gap-0.5 px-1 text-center leading-tight">
+                      <IconeMaquina icone={m.icone} tipo={m.tipo} className="size-4 text-base" />
+                      <span className="line-clamp-2">{m.nome}</span>
+                    </span>
+                  ) : (
+                    "+"
+                  )}
                 </button>
               );
             }),
@@ -90,6 +99,41 @@ export default function EditorMapa({ inicial }: { inicial: Maq[] }) {
       {/* Opções da máquina escolhida */}
       {atual && (
         <div className="flex flex-wrap items-end gap-4 rounded-xl border border-border p-4">
+          {/* Ícone: um da lista ou qualquer emoji */}
+          <div className="w-full space-y-2">
+            <Label>Ícone do {atual.nome}</Label>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => mudar(atual.id, { icone: null })}
+                className={`rounded-lg border px-2 py-1.5 text-xs ${!atual.icone ? "border-cyan bg-cyan/20 text-cyan" : "border-border hover:bg-accent"}`}
+              >
+                Padrão
+              </button>
+              {Object.keys(ICONES_MAQUINA).map((nome) => (
+                <button
+                  key={nome}
+                  type="button"
+                  title={nome}
+                  onClick={() => mudar(atual.id, { icone: nome })}
+                  className={`rounded-lg border p-1.5 ${atual.icone === nome ? "border-cyan bg-cyan/20 text-cyan" : "border-border hover:bg-accent"}`}
+                >
+                  <IconeMaquina icone={nome} className="size-5" />
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">ou um emoji:</span>
+              <Input
+                className="w-24"
+                maxLength={8}
+                placeholder="🏎️"
+                value={atual.icone && !ICONES_MAQUINA[atual.icone] ? atual.icone : ""}
+                onChange={(e) => mudar(atual.id, { icone: e.target.value.trim() || null })}
+              />
+              <span className="text-xs text-muted-foreground">(no Windows: tecla Windows + ponto)</span>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="tv">{atual.nome} divide a TV com</Label>
             <NativeSelect id="tv" value={atual.tv ?? ""} onChange={(e) => mudar(atual.id, { tv: e.target.value || null })}>

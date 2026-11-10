@@ -138,3 +138,10 @@ export function somarMinutosHora(hora: string, minutos: number) {
   const t = (h * 60 + m + minutos) % 1440;
   return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 }
+
+// Situações da máquina sem cobrança (escolhidas no mapa)
+export const SITUACOES_MAQUINA = {
+  manutencao: { nome: "Manutenção", icone: "🔧", cor: "border-zinc-400 bg-zinc-500/25 hover:bg-zinc-500/35" },
+  funcionario: { nome: "Funcionário", icone: "👤", cor: "border-sky-400 bg-sky-500/15 hover:bg-sky-500/25" },
+  sem_cobranca: { nome: "Uso sem cobrança", icone: "🎁", cor: "border-slate-300 bg-slate-400/20 hover:bg-slate-400/30" },
+} as const;

@@ -10,7 +10,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { DURACOES, somarMinutosHora } from "@/lib/caixa";
 
 export type ClienteOpcao = { id: string; nome: string; whatsapp: string };
-export type EquipOpcao = { id: string; nome: string; emUso: boolean; reserva?: string; tv?: string }; // reserva = "20:00"; tv = quem usa a TV dividida
+export type EquipOpcao = { id: string; nome: string; emUso: boolean; reserva?: string; tv?: string; bloqueio?: string }; // reserva = "20:00"; tv = quem usa a TV dividida; bloqueio = "Manutenção"
 
 type Props = {
   data: string;
@@ -124,9 +124,10 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
         <NativeSelect id="equipamento_id" name="equipamento_id" value={equip} onChange={(e) => setEquip(e.target.value)}>
           <option value="livre">Livre (qualquer máquina)</option>
           {equipamentos.map((e) => (
-            <option key={e.id} value={e.id} disabled={e.emUso}>
+            <option key={e.id} value={e.id} disabled={e.emUso || !!e.bloqueio}>
               {e.nome}
               {e.emUso ? " (em uso)" : ""}
+              {e.bloqueio ? ` (${e.bloqueio})` : ""}
               {e.reserva ? ` ⚠ reservada às ${e.reserva}` : ""}
               {e.tv ? ` ⚠ TV em uso (${e.tv})` : ""}
             </option>

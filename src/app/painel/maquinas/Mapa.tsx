@@ -2,13 +2,16 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Car, Gamepad2, Glasses, Monitor, Tv } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import IconeMaquina from "@/components/painel/IconeMaquina";
 import Janela from "@/components/painel/Janela";
 import { useAgora } from "@/components/painel/UsoAoVivo";
-import { AVISO_MINUTOS, calcularUso, duracao, hhmm, minutosRestantes } from "@/lib/caixa";
+import { AVISO_MINUTOS, calcularUso, duracao, hhmm, minutosRestantes, SITUACOES_MAQUINA } from "@/lib/caixa";
 import { reais } from "@/lib/formatos";
 import type { MaquinaEstado } from "@/lib/caixa-servidor";
 import NovoAtendimento, { type ClienteOpcao } from "../caixa/NovoAtendimento";
+import { mudarSituacaoMaquina } from "./actions";
 
 type Props = {
   maquinas: MaquinaEstado[];
@@ -18,13 +21,11 @@ type Props = {
   clientes: ClienteOpcao[];
 };
 
-const ICONES: Record<string, typeof Monitor> = { pc: Monitor, console: Gamepad2, simulador: Car, vr: Glasses, outro: Tv };
-
 // Mapa da arena: cada máquina no seu lugar, com a cor da situação
 export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }: Props) {
   const router = useRouter();
   const [abrindo, iniciar] = useTransition();
-  const [nova, setNova] = useState<{ equip: string; agora: string } | null>(null);
+  const [nova, setNova] = useState<{ equip: MaquinaEstado; agora: string } | null>(null);
   const fechar = useCallback(() => setNova(null), []);
 
   const noMapa = maquinas.filter((m) => m.mapa_x && m.mapa_y);
@@ -37,24 +38,29 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
   const gradeX = Array.from({ length: colunas }, (_, i) => (usadasX.has(i + 1) ? "minmax(0, 1fr)" : "minmax(0, 0.3fr)")).join(" ");
   const gradeY = Array.from({ length: linhas }, (_, i) => (usadasY.has(i + 1) ? "minmax(7em, auto)" : "1.5em")).join(" ");
 
+  const abrir = (id: string) => iniciar(() => router.push(`/painel/maquinas?abrir=${id}`, { scroll: false }));
+  // Em uso → janela do atendimento; esperando pagamento → janela para receber; senão → iniciar/marcar situação
   const clicar = (m: MaquinaEstado) => {
-    if (m.atendimento) iniciar(() => router.push(`/painel/maquinas?abrir=${m.atendimento!.id}`, { scroll: false }));
-    else setNova({ equip: m.id, agora: hhmm(new Date().toISOString()) });
+    if (m.atendimento) abrir(m.atendimento.id);
+    else if (m.aReceber) abrir(m.aReceber.id);
+    else setNova({ equip: m, agora: hhmm(new Date().toISOString()) });
   };
 
-  const livres = maquinas.filter((m) => !m.emUso).length;
+  const livres = maquinas.filter((m) => !m.emUso && !m.aReceber && m.situacao === "normal").length;
+  const ocupadas = maquinas.filter((m) => m.emUso).length;
 
   return (
     <div className={`space-y-6 ${abrindo ? "cursor-wait" : ""}`}>
       {/* Legenda + contagem */}
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="font-semibold">
-          <span className="text-green">{livres} livres</span> · <span className="text-cyan">{maquinas.length - livres} em uso</span>
+          <span className="text-green">{livres} livres</span> · <span className="text-cyan">{ocupadas} em uso</span>
         </span>
         <Legenda cor="border-green bg-green/10" texto="Livre" />
         <Legenda cor="border-cyan bg-cyan/15" texto="Em uso" />
         <Legenda cor="border-amber bg-amber/20" texto={`Acabando (≤ ${AVISO_MINUTOS} min)`} />
-        <Legenda cor="border-destructive bg-destructive/20" texto="Tempo acabou" />
+        <Legenda cor="border-destructive bg-destructive/20" texto="Acabou · falta receber" />
+        <Legenda cor="border-zinc-400 bg-zinc-500/25" texto="Manutenção / funcionário / sem cobrança" />
         <Legenda cor="border-purple bg-purple/15" texto="Reservada em breve" />
       </div>
 
@@ -94,8 +100,21 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
             {semMaquina.map((a) => (
               <Cartao
                 key={a.id}
-                m={{ id: a.id, nome: "Livre", tipo: "outro", mapa_x: null, mapa_y: null, emUso: true, atendimento: a }}
-                onClick={() => iniciar(() => router.push(`/painel/maquinas?abrir=${a.id}`, { scroll: false }))}
+                m={{
+                  id: a.id,
+                  nome: "Livre",
+                  tipo: "outro",
+                  mapa_x: null,
+                  mapa_y: null,
+                  emUso: true,
+                  icone: null,
+                  situacao: "normal",
+                  situacaoObs: null,
+                  situacaoDesde: null,
+                  aReceber: null,
+                  atendimento: a,
+                }}
+                onClick={() => abrir(a.id)}
               />
             ))}
           </div>
@@ -103,16 +122,31 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes }
       )}
 
       {nova && (
-        <Janela onFechar={fechar} largura="max-w-2xl" titulo={<h2 className="font-display text-xl font-bold">Novo atendimento</h2>}>
-          <NovoAtendimento
-            data={data}
-            agora={nova.agora}
-            valorHora={valorHora}
-            clientes={clientes}
-            equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv }))}
-            equipInicial={nova.equip}
-            onIniciado={fechar}
-          />
+        <Janela
+          onFechar={fechar}
+          largura="max-w-2xl"
+          titulo={
+            <h2 className="flex items-center gap-2 font-display text-xl font-bold">
+              <IconeMaquina icone={nova.equip.icone} tipo={nova.equip.tipo} className="size-6 text-2xl" /> {nova.equip.nome}
+            </h2>
+          }
+        >
+          {nova.equip.situacao === "normal" ? (
+            <div className="space-y-6">
+              <NovoAtendimento
+                data={data}
+                agora={nova.agora}
+                valorHora={valorHora}
+                clientes={clientes}
+                equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv, bloqueio: m.situacao !== "normal" ? SITUACOES_MAQUINA[m.situacao].nome : undefined }))}
+                equipInicial={nova.equip.id}
+                onIniciado={fechar}
+              />
+              <Situacao m={nova.equip} onFeito={fechar} />
+            </div>
+          ) : (
+            <Situacao m={nova.equip} onFeito={fechar} />
+          )}
         </Janela>
       )}
     </div>
@@ -130,8 +164,8 @@ function Legenda({ cor, texto }: { cor: string; texto: string }) {
 // Um cartão de máquina (o tempo atualiza sozinho)
 function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
   const agora = useAgora();
-  const Icone = ICONES[m.tipo] ?? Monitor;
   const a = m.atendimento;
+  const especial = m.situacao !== "normal" ? SITUACOES_MAQUINA[m.situacao] : null;
 
   let cor = "border-green/70 bg-green/10 hover:bg-green/20";
   let linha2: React.ReactNode = <span className="text-[1em] text-green">Livre</span>;
@@ -156,6 +190,29 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
         </b>
       </span>
     );
+  } else if (m.aReceber) {
+    // Tempo acabou e ainda não pagou: fica vermelha até receber ou cancelar
+    cor = "border-destructive bg-destructive/25 hover:bg-destructive/35";
+    linha2 = <span className="text-[1em] font-bold text-destructive">Acabou · receber</span>;
+    linha3 = (
+      <span className="text-[0.85em] leading-snug">
+        <span className="block truncate">{m.aReceber.nome}</span>
+        <b className="text-destructive">falta {reais(m.aReceber.falta)}</b>
+      </span>
+    );
+  } else if (especial) {
+    cor = especial.cor;
+    linha2 = (
+      <span className="text-[1em] font-semibold">
+        {especial.icone} {especial.nome}
+      </span>
+    );
+    linha3 = (
+      <span className="text-[0.85em] leading-snug text-muted-foreground">
+        {m.situacaoObs && <span className="block truncate">{m.situacaoObs}</span>}
+        {m.situacaoDesde && `desde ${hhmm(m.situacaoDesde)}`}
+      </span>
+    );
   } else if (m.reserva) {
     cor = "border-purple bg-purple/15 hover:bg-purple/25";
   }
@@ -163,7 +220,7 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className={`flex h-full min-h-[7em] w-full min-w-0 flex-col items-start gap-[0.3em] overflow-hidden rounded-[0.8em] border-2 p-[0.7em] text-left transition ${cor}`}>
       <span className="flex w-full items-start gap-1.5">
-        <Icone className="mt-[0.1em] size-[1.1em] shrink-0 opacity-80" />
+        <IconeMaquina icone={m.icone} tipo={m.tipo} className="mt-[0.1em] size-[1.1em] shrink-0 text-[1.05em] opacity-90" />
         <span className="line-clamp-2 min-w-0 text-[1em] leading-tight font-bold break-words">{m.nome}</span>
       </span>
       <span className="flex w-full min-w-0 flex-col gap-[0.15em]">
@@ -172,8 +229,55 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
       </span>
       <span className="mt-auto flex flex-wrap gap-1">
         {m.reserva && <span className="rounded bg-purple/30 px-[0.4em] text-[0.75em] font-semibold text-purple">📅 {m.reserva}</span>}
+        {a && m.aReceber && (
+          <span className="rounded bg-destructive/30 px-[0.4em] text-[0.75em] font-semibold text-destructive">💰 {reais(m.aReceber.falta)} a receber</span>
+        )}
         {m.tv && <span className="rounded bg-amber/30 px-[0.4em] text-[0.75em] font-semibold text-amber">📺 TV: {m.tv}</span>}
       </span>
     </button>
+  );
+}
+
+// Marcar a máquina como manutenção / funcionário / uso sem cobrança, ou liberar
+function Situacao({ m, onFeito }: { m: MaquinaEstado; onFeito: () => void }) {
+  const [obs, setObs] = useState(m.situacaoObs ?? "");
+  const [enviando, iniciar] = useTransition();
+  const mudar = (situacao: string) =>
+    iniciar(async () => {
+      const f = new FormData();
+      f.set("id", m.id);
+      f.set("situacao", situacao);
+      f.set("obs", obs);
+      await mudarSituacaoMaquina(f);
+      onFeito();
+    });
+  const atual = m.situacao !== "normal" ? SITUACOES_MAQUINA[m.situacao] : null;
+
+  return (
+    <div className={`space-y-3 ${atual ? "" : "border-t border-border pt-5"}`}>
+      {atual ? (
+        <p className="text-lg">
+          {atual.icone} <b>{atual.nome}</b>
+          {m.situacaoDesde && <span className="text-muted-foreground"> desde {hhmm(m.situacaoDesde)}</span>}
+        </p>
+      ) : (
+        <p className="text-sm font-semibold text-muted-foreground">Ou deixar a máquina ocupada sem cobrança:</p>
+      )}
+      <Input value={obs} onChange={(e) => setObs(e.target.value)} maxLength={120} placeholder="Observação (opcional). Ex.: troca de fonte, uso do Pedro" />
+      <div className="flex flex-wrap gap-2">
+        {atual && (
+          <Button type="button" disabled={enviando} onClick={() => mudar("normal")}>
+            ✓ Liberar máquina
+          </Button>
+        )}
+        {(Object.keys(SITUACOES_MAQUINA) as (keyof typeof SITUACOES_MAQUINA)[])
+          .filter((k) => k !== m.situacao)
+          .map((k) => (
+            <Button key={k} type="button" variant="outline" disabled={enviando} onClick={() => mudar(k)}>
+              {SITUACOES_MAQUINA[k].icone} {SITUACOES_MAQUINA[k].nome}
+            </Button>
+          ))}
+      </div>
+    </div>
   );
 }

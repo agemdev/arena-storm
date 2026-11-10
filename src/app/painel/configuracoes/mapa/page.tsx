@@ -24,7 +24,7 @@ export default function MapaConfigPage() {
 
 async function Conteudo() {
   const { supabase } = await exigirAdmin();
-  const { data } = await supabase.from("equipamentos").select("id, nome, mapa_x, mapa_y, compartilha_com").eq("ativo", true).order("ordem");
-  const inicial = (data ?? []).map((e) => ({ id: e.id, nome: e.nome, x: e.mapa_x, y: e.mapa_y, tv: e.compartilha_com }));
+  const { data } = await supabase.from("equipamentos").select("id, nome, tipo, mapa_x, mapa_y, compartilha_com, icone").eq("ativo", true).order("ordem");
+  const inicial = (data ?? []).map((e) => ({ id: e.id, nome: e.nome, tipo: e.tipo, x: e.mapa_x, y: e.mapa_y, tv: e.compartilha_com, icone: e.icone }));
   return <EditorMapa inicial={inicial} />;
 }

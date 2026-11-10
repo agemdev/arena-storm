@@ -9,6 +9,7 @@ import {
   hhmm,
   hojeISO,
   SELECT_ATENDIMENTO,
+  SITUACOES_MAQUINA,
   somarDias,
   totais,
   type AtendimentoLinha,
@@ -151,7 +152,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
             data={data}
             valorHora={String(plano.data?.preco ?? 12).replace(".", ",")}
             clientes={clientes.data ?? []}
-            equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv }))}
+            equipamentos={maquinas.map((m) => ({ id: m.id, nome: m.nome, emUso: m.emUso, reserva: m.reserva, tv: m.tv, bloqueio: m.situacao !== "normal" ? SITUACOES_MAQUINA[m.situacao].nome : undefined }))}
           />
         </div>
       </div>
