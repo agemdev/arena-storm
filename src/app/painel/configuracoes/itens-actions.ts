@@ -41,6 +41,17 @@ export async function salvarItem(_: Resultado, form: FormData): Promise<Resultad
   } else {
     const tipo = String(form.get("tipo"));
     dados.tipo = tipo in TIPOS_EQUIP ? tipo : "outro";
+    // IP e MAC (só consoles/VR/outros; PC e Simulador usam o programa)
+    if (form.has("ip")) {
+      const ip = String(form.get("ip") ?? "").trim();
+      if (ip && !/^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(ip)) return { ok: false, msg: "IP inválido. Ex: 192.168.0.50" };
+      const mac = String(form.get("mac") ?? "").trim().toLowerCase().replace(/[:.\s]/g, "-");
+      const macLimpo = mac.replace(/-/g, "");
+      if (mac && !/^[0-9a-f]{12}$/.test(macLimpo)) return { ok: false, msg: "MAC inválido. Ex: A4:5E:60:12:34:56" };
+      dados.ip = ip || null;
+      dados.mac = mac ? macLimpo.match(/../g)!.join("-") : null;
+      if (!ip && !mac) dados.rede_online = null; // sem endereço: some o status do mapa
+    }
   }
 
   const { error } = id

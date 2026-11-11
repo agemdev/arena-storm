@@ -10,6 +10,7 @@ const bcrypt = require("bcryptjs");
 const P = require("./protocolo");
 const banco = require("./banco");
 const nuvem = require("./nuvem");
+const rede = require("./rede");
 
 const SITUACOES = ["normal", "manutencao", "funcionario", "sem_cobranca"];
 
@@ -38,6 +39,10 @@ class Hub extends EventEmitter {
     this.nuvemOk = false;
     this.erro = null;
     this.timers = [];
+    this.consoles = []; // [{id, nome, ip, mac, rede_online}] testados por ping
+    this.falhas = new Map(); // id → pings seguidos sem resposta
+    this.ultimaBuscaMac = 0;
+    this.testando = false;
   }
 
   // ---------- Início ----------
@@ -49,6 +54,7 @@ class Hub extends EventEmitter {
     this.timers.push(setInterval(() => this.verificarPulsos(), 5_000));
     this.timers.push(setInterval(() => this.avisarVivo(), P.HUB_CONTATO_MS));
     this.timers.push(setInterval(() => this.esvaziarFila(), 10_000));
+    this.timers.push(setInterval(() => this.testarConsoles(), 15_000));
     this.avisarStatus();
   }
 
@@ -99,7 +105,7 @@ class Hub extends EventEmitter {
       const [cfg, arena, equips, abertos, fechados] = await Promise.all([
         sb.from("agente_config").select("senha_mestre_hash").eq("arena_id", this.arenaId).maybeSingle(),
         sb.from("arenas").select("nome").eq("id", this.arenaId).maybeSingle(),
-        sb.from("equipamentos").select("id, nome, tipo, situacao, situacao_obs, ativo").eq("ativo", true).order("ordem"),
+        sb.from("equipamentos").select("id, nome, tipo, situacao, situacao_obs, ativo, ip, mac, rede_online").eq("ativo", true).order("ordem"),
         sb
           .from("atendimentos")
           .select("id, nome, equipamento_id, inicio, fim_previsto, valor_hora")
@@ -122,6 +128,9 @@ class Hub extends EventEmitter {
       this.arena = { nome: arena.data?.nome ?? this.arena.nome };
       this.maquinas = (equips.data ?? []).map((e) => ({ id: e.id, nome: e.nome, tipo: e.tipo }));
       this.abertos = abertos.data ?? [];
+      this.consoles = (equips.data ?? [])
+        .filter((e) => e.ip || e.mac)
+        .map((e) => ({ id: e.id, nome: e.nome, ip: e.ip ? String(e.ip).replace(/\/32$/, "") : null, mac: e.mac, rede_online: e.rede_online }));
 
       // Quem terminou e ainda não pagou
       const pendentes = new Map();
@@ -186,6 +195,49 @@ class Hub extends EventEmitter {
       this.marcarNuvem(true);
     } catch (e) {
       this.marcarNuvem(false, e.message ?? String(e));
+    }
+  }
+
+  // ---------- Consoles (PS5, Switch, VR): ping a cada 15 s ----------
+  async testarConsoles() {
+    if (this.testando || !this.consoles.length) return;
+    this.testando = true;
+    try {
+      // Sem resposta e com MAC: procura o IP novo (no máximo a cada 2 min)
+      const perdidos = this.consoles.filter((c) => c.mac && (!c.ip || (this.falhas.get(c.id) ?? 0) >= 2));
+      if (perdidos.length && Date.now() - this.ultimaBuscaMac > 120_000) {
+        this.ultimaBuscaMac = Date.now();
+        const achados = await rede.acharPorMac(perdidos.map((c) => c.mac));
+        for (const c of perdidos) {
+          const novo = achados.get(c.mac);
+          if (!novo || novo === c.ip) continue;
+          this.log(`${c.nome}: IP mudou ${c.ip ?? "(vazio)"} → ${novo} (achado pelo MAC)`);
+          c.ip = novo;
+          this.falhas.set(c.id, 0);
+          if (this.nuvemOk) await nuvem.supabase().from("equipamentos").update({ ip: novo }).eq("id", c.id);
+        }
+      }
+      await Promise.all(
+        this.consoles
+          .filter((c) => c.ip)
+          .map(async (c) => {
+            const respondeu = await rede.ping(c.ip);
+            const falhas = respondeu ? 0 : (this.falhas.get(c.id) ?? 0) + 1;
+            this.falhas.set(c.id, falhas);
+            const online = respondeu ? true : falhas >= 2 ? false : c.rede_online; // 2 falhas seguidas = desligado
+            if (online === c.rede_online || online == null) return;
+            c.rede_online = online;
+            this.log(`${c.nome} ${online ? "🟢 ligou" : "⚫ desligou"} (${c.ip})`);
+            this.avisarStatus();
+            if (!this.nuvemOk) return;
+            const dados = online ? { rede_online: true, rede_visto_em: new Date().toISOString() } : { rede_online: false };
+            await nuvem.supabase().from("equipamentos").update(dados).eq("id", c.id);
+          }),
+      );
+    } catch (e) {
+      this.log(`Teste dos consoles: ${e.message}`);
+    } finally {
+      this.testando = false;
     }
   }
 
@@ -402,7 +454,7 @@ class Hub extends EventEmitter {
       .flat()
       .filter((i) => i && i.family === "IPv4" && !i.internal)
       .map((i) => i.address);
-    this.emit("status", { nuvem: this.nuvemOk, erro: this.erro, arena: this.arena, pcs, fila: banco.fila().length, ips });
+    this.emit("status", { nuvem: this.nuvemOk, erro: this.erro, arena: this.arena, pcs, fila: banco.fila().length, ips, consoles: this.consoles.map((c) => ({ nome: c.nome, ip: c.ip, online: c.rede_online })) });
   }
 }
 

@@ -53,7 +53,7 @@ export type MaquinaEstado = {
   situacaoObs: string | null;
   situacaoDesde: string | null;
   aReceber: { id: string; nome: string; falta: number } | null; // tempo acabou e ainda não pagou
-  ligado: "ligado" | "desligado" | "desativado" | null; // null = sem programa instalado (ex.: PS5)
+  ligado: "ligado" | "desligado" | "desativado" | null; // null = sem programa e sem IP
   reserva?: string; // "20:00"
   tv?: string; // nome de quem está usando a TV dividida
   atendimento: { id: string; nome: string; inicio: string; fim_previsto: string | null; valor_hora: number } | null;
@@ -64,7 +64,7 @@ export async function estadoMaquinas(supabase: SupabaseClient) {
   const [equips, abertos, reservas, fechados, agentes, cfg] = await Promise.all([
     supabase
       .from("equipamentos")
-      .select("id, nome, tipo, mapa_x, mapa_y, compartilha_com, icone, situacao, situacao_obs, situacao_desde")
+      .select("id, nome, tipo, mapa_x, mapa_y, compartilha_com, icone, situacao, situacao_obs, situacao_desde, ip, mac, rede_online")
       .eq("ativo", true)
       .order("ordem"),
     supabase
@@ -116,7 +116,8 @@ export async function estadoMaquinas(supabase: SupabaseClient) {
       aReceber: pendentes.get(e.id) ?? null,
       ligado: (() => {
         const g = porAgente.get(e.id);
-        if (!g) return null;
+        // Console/VR: o Servidor testa pelo IP (ping)
+        if (!g) return e.ip || e.mac ? (pcLigado(!!e.rede_online, hub) ? "ligado" : "desligado") : null;
         if (g.estado === "desativado") return "desativado";
         return pcLigado(g.online, hub) ? "ligado" : "desligado";
       })(),

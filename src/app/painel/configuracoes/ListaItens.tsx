@@ -26,7 +26,7 @@ export default function ListaItens({ tabela, titulo, ajuda }: Props) {
 
 async function Itens({ tabela }: { tabela: Props["tabela"] }) {
   const { supabase, arenaId } = await exigirAdmin();
-  const campos = tabela === "produtos" ? "id, nome, ativo, ordem, preco" : "id, nome, ativo, ordem, tipo";
+  const campos = tabela === "produtos" ? "id, nome, ativo, ordem, preco" : "id, nome, ativo, ordem, tipo, ip, mac";
   const { data } = await supabase.from(tabela).select(campos).eq("arena_id", arenaId).order("ordem").order("nome");
   const itens = (data ?? []) as unknown as Item[];
   const proximaOrdem = Math.max(0, ...itens.map((i) => i.ordem)) + 1;

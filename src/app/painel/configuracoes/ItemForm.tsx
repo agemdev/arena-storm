@@ -1,13 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { salvarItem } from "./itens-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { TIPOS_EQUIP } from "@/lib/caixa";
 
-export type Item = { id: string; nome: string; ativo: boolean; ordem: number; preco?: number; tipo?: string };
+export type Item = { id: string; nome: string; ativo: boolean; ordem: number; preco?: number; tipo?: string; ip?: string | null; mac?: string | null };
+
+// PC e Simulador têm o programa; os outros (PS5, Switch, VR) o Servidor testa por IP/MAC
+const SEM_PROGRAMA = ["console", "vr", "outro"];
 
 type Props = { tabela: "equipamentos" | "produtos"; item?: Item; proximaOrdem?: number };
 
@@ -15,6 +18,7 @@ type Props = { tabela: "equipamentos" | "produtos"; item?: Item; proximaOrdem?: 
 export default function ItemForm({ tabela, item, proximaOrdem = 0 }: Props) {
   const [res, acao, enviando] = useActionState(salvarItem, null);
   const produto = tabela === "produtos";
+  const [tipo, setTipo] = useState(item?.tipo ?? "pc");
 
   return (
     <form
@@ -36,13 +40,19 @@ export default function ItemForm({ tabela, item, proximaOrdem = 0 }: Props) {
           className="w-24"
         />
       ) : (
-        <NativeSelect name="tipo" defaultValue={item?.tipo ?? "pc"} aria-label="Tipo" className="w-36">
+        <NativeSelect name="tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo" className="w-36">
           {Object.entries(TIPOS_EQUIP).map(([v, l]) => (
             <option key={v} value={v}>
               {l}
             </option>
           ))}
         </NativeSelect>
+      )}
+      {!produto && SEM_PROGRAMA.includes(tipo) && (
+        <>
+          <Input name="ip" defaultValue={item?.ip ?? ""} placeholder="IP (ex.: 192.168.0.50)" aria-label="IP" title="IP na rede (o Servidor testa se está ligado)" className="w-40" />
+          <Input name="mac" defaultValue={item?.mac ?? ""} placeholder="MAC (opcional)" aria-label="MAC" title="Endereço MAC: com ele o Servidor acha o IP novo sozinho (mesma rede)" className="w-44" />
+        </>
       )}
       <Input name="ordem" type="number" min={0} defaultValue={item?.ordem ?? proximaOrdem} aria-label="Ordem" title="Ordem" className="w-16" />
       <label className="flex items-center gap-1 text-sm text-muted-foreground">

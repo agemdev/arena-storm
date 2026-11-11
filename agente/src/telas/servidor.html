@@ -91,6 +91,7 @@
     <div id="painel" class="escondido" style="display: flex; flex-direction: column; gap: 16px; flex: 1; min-height: 0">
       <div class="cartao" id="nuvem"></div>
       <div class="cartao apagado" id="ip"></div>
+      <div class="cartao" id="consoles"></div>
       <div class="cartao">
         <table>
           <thead>
@@ -129,6 +130,8 @@
           ? `🟢 Nuvem conectada · ${s.pcs.length} PC(s) na rede${s.fila ? ` · ${s.fila} ação(ões) esperando envio` : ""}`
           : `🔴 Sem nuvem (internet?) — os PCs continuam com o último estado. ${s.erro ?? ""}`;
         $("ip").textContent = s.ips?.length ? `IP deste Servidor: ${s.ips.join("  ou  ")}  (digite no PC se ele não achar sozinho)` : "";
+        $("consoles").classList.toggle("escondido", !s.consoles?.length);
+        $("consoles").textContent = `Consoles: ${(s.consoles ?? []).map((c) => `${c.online ? "🟢" : "⚫"} ${c.nome} (${c.ip ?? "sem IP"})`).join("   ")}`;
         $("pcs").replaceChildren(
           ...s.pcs.map((p) => {
             const tr = document.createElement("tr");

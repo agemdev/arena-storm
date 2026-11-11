@@ -1,7 +1,7 @@
 {
   "name": "arena-storm-agente",
   "productName": "Arena Storm",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Programa dos PCs da Arena Storm (substitui o Gizmo)",
   "private": true,
   "main": "src/main.js",

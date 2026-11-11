@@ -62,7 +62,7 @@ export default function Mapa({ maquinas, semMaquina, data, valorHora, clientes, 
           {comPrograma.length > 0 && (
             <span className="text-muted-foreground">
               {" "}
-              · 🟢 {ligadas}/{comPrograma.length} PCs ligados
+              · 🟢 {ligadas}/{comPrograma.length} ligados
             </span>
           )}
         </span>
@@ -233,13 +233,13 @@ function Cartao({ m, onClick }: { m: MaquinaEstado; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} className={`flex h-full min-h-[7em] w-full min-w-0 flex-col items-start gap-[0.3em] overflow-hidden rounded-[0.8em] border-2 p-[0.7em] text-left transition ${cor}`}>
       <span className="relative flex w-full items-start gap-1.5 pr-[0.9em]">
-        {/* Ligado / desligado (só PCs com o programa) */}
+        {/* Ligado / desligado (PCs com o programa; consoles pelo IP) */}
         {m.ligado && (
           <span
             className={`absolute top-[0.15em] right-0 size-[0.65em] rounded-full ${
               m.ligado === "ligado" ? "bg-green shadow-[0_0_6px] shadow-green" : m.ligado === "desativado" ? "bg-amber" : "bg-zinc-600 ring-1 ring-zinc-400"
             }`}
-            title={m.ligado === "ligado" ? "PC ligado" : m.ligado === "desativado" ? "Programa desativado" : "PC desligado"}
+            title={m.ligado === "ligado" ? "Ligado" : m.ligado === "desativado" ? "Programa desativado" : "Desligado (ou sem resposta na rede)"}
           />
         )}
         <IconeMaquina icone={m.icone} tipo={m.tipo} className="mt-[0.1em] size-[1.1em] shrink-0 text-[1.05em] opacity-90" />

@@ -22,6 +22,16 @@ Antes de instalar no PC: feche a versão de teste (`npm run pc`) e o Gizmo daque
 - Se fecharem pelo Gerenciador de Tarefas, volta em ~2 segundos.
 - Fechar de verdade, desativar ou desinstalar: só pelo acesso mestre (**Ctrl + Alt + Shift + A**). No Servidor: ícone da bandeja → Fechar o Servidor.
 
+## Consoles (PS5, Switch, VR)
+
+Não têm programa: o Servidor faz "ping" no IP a cada 15 s e o mapa mostra 🟢/⚫.
+
+- Painel → Configurações → Equipamentos → digite o **IP** (e o **MAC**, se souber).
+- Com o MAC: se o IP mudar, o Servidor acha o novo sozinho (só se o console estiver na **mesma rede** do Servidor).
+- Console em rede separada: vale só o IP digitado (o roteador precisa deixar o Servidor alcançar essa rede).
+- Onde ver no PS5: Configurações → Rede → Status da conexão (Endereço IP e Endereço MAC).
+- Console em modo repouso pode aparecer ⚫.
+
 ## Gerar os instaladores (programador)
 
 ```
