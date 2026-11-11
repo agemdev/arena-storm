@@ -175,6 +175,12 @@
         if (!r.ok) return;
         mensagem("");
         await atualizar();
+        // Sem Servidor ainda não há lista de máquinas: vai ao menu (lá tem "Endereço do Servidor")
+        if (!resumo.maquinas.length) {
+          mostrar("telaMenu");
+          mensagem("Ainda sem contato com o Servidor. Se ele já estiver ligado, use “Endereço do Servidor” e digite o IP que aparece na tela dele.", false);
+          return;
+        }
         mostrar(inicio === "escolher" || !resumo.equipamentoId ? "telaEscolher" : "telaMenu");
       };
       $("salvarMaquina").onclick = async () => {

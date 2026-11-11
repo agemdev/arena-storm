@@ -99,17 +99,21 @@ async function iniciarServidor() {
     app.exit(0);
   });
 
-  janelaServidor.webContents.once("did-finish-load", async () => {
+  // Descobre o endereço da nuvem (pergunta ao site na 1ª vez) e vê se já tem login. Sem internet: tenta de novo.
+  const comecar = async () => {
     let user = null;
     try {
+      await require("./config").prepararNuvem();
       user = await nuvem.usuario();
     } catch (e) {
-      janelaServidor.webContents.send("servidor:erro", e.message);
+      janelaServidor.webContents.send("servidor:erro", `${e.message} Tentando de novo em 15 s...`);
+      setTimeout(comecar, 15_000);
       return;
     }
     if (user) ligarHub(user.email);
     else janelaServidor.webContents.send("servidor:login");
-  });
+  };
+  janelaServidor.webContents.once("did-finish-load", comecar);
 }
 
 function ligarHub(email) {

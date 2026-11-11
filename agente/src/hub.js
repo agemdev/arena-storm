@@ -398,7 +398,11 @@ class Hub extends EventEmitter {
       estado: i.estado,
       modo: i.equipamentoId ? this.estados[i.equipamentoId]?.modo : null,
     }));
-    this.emit("status", { nuvem: this.nuvemOk, erro: this.erro, arena: this.arena, pcs, fila: banco.fila().length });
+    const ips = Object.values(require("node:os").networkInterfaces())
+      .flat()
+      .filter((i) => i && i.family === "IPv4" && !i.internal)
+      .map((i) => i.address);
+    this.emit("status", { nuvem: this.nuvemOk, erro: this.erro, arena: this.arena, pcs, fila: banco.fila().length, ips });
   }
 }
 

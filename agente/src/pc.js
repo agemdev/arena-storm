@@ -275,8 +275,8 @@ class PC {
   async acaoMestre(dados) {
     switch (dados.acao) {
       case "entrar": {
-        if (!this.senhaHash) return { ok: false, msg: "Ainda sem senha: conecte ao Servidor pelo menos uma vez." };
-        const ok = await bcrypt.compare(String(dados.senha ?? ""), this.senhaHash);
+        // Antes do 1º contato com o Servidor vale a senha padrão (102030)
+        const ok = this.senhaHash ? await bcrypt.compare(String(dados.senha ?? ""), this.senhaHash) : String(dados.senha ?? "") === "102030";
         if (!ok) return { ok: false, msg: "Senha errada." };
         this.senhaDigitada = String(dados.senha);
         return { ok: true, ...this.resumo() };
