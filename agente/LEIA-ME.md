@@ -1,29 +1,34 @@
 # Programa dos PCs (Arena Storm)
 
-Um só programa, dois modos:
+Dois instaladores (mesmo programa, modo já definido):
 
-- **Servidor** (PC Servidor, só 1): liga os PCs ao painel. Precisa de internet e de um login próprio.
-- **PC** (PCs de jogo e Simulador): bloqueia o PC livre, mostra o tempo, avisa e obedece ao Caixa.
+- **Instalar Arena Storm Servidor** → só no PC Servidor. Abre a janela do Servidor (fechar = vai para a bandeja, perto do relógio).
+- **Instalar Arena Storm PC** → PCs de jogo e Simulador. Roda escondido: sem janela, sem ícone na área de trabalho.
 
-## Testar (fase 6a, sem instalador)
+## Instalar
 
-Precisa do Node.js instalado (https://nodejs.org) e desta pasta copiada no PC.
+1. Copie o instalador para o PC (pasta `OneDrive\Arena Storm\Sistema\Instaladores`).
+2. Abra. Se aparecer "O Windows protegeu o computador": **Mais informações → Executar assim mesmo** (o programa não tem assinatura paga).
+3. Aceite a pergunta de administrador. O instalador já libera o Firewall (portas 47800/47801).
+4. Ao terminar, o programa abre sozinho:
+   - Servidor: entre com `servidor@arena.storm`.
+   - PC: **Ctrl + Alt + Shift + A** → senha mestre → escolha a máquina.
+
+Antes de instalar no PC: feche a versão de teste (`npm run pc`) e o Gizmo daquele PC.
+
+## Proteção
+
+- Abre sozinho junto com o Windows.
+- Se fecharem pelo Gerenciador de Tarefas, volta em ~2 segundos.
+- Fechar de verdade, desativar ou desinstalar: só pelo acesso mestre (**Ctrl + Alt + Shift + A**). No Servidor: ícone da bandeja → Fechar o Servidor.
+
+## Gerar os instaladores (programador)
 
 ```
 cd agente
 npm install
-npm run servidor   # no PC Servidor
-npm run pc         # no PC de jogo (ex.: Computador #10)
+npm run instalador:pc
+npm run instalador:servidor
 ```
 
-- O PC acha o Servidor sozinho na rede. Se não achar: Ctrl + Alt + Shift + A → Endereço do Servidor.
-- Na primeira vez o PC pede a senha mestre (padrão **102030**) e qual máquina ele é.
-- Liberar a porta **47800 (TCP)** e **47801 (UDP)** no Firewall do Windows do Servidor (o Windows pergunta na 1ª vez: marque "Redes privadas").
-
-## Teste sem travar a tela
-
-`ARENA_TESTE=1` → janela de bloqueio pequena e configuração em pasta temporária.
-
-## Acesso mestre
-
-**Ctrl + Alt + Shift + A** em qualquer momento (até em jogo). Senha definida no painel → Configurações → Programa dos PCs.
+Saem em `agente/dist/`. Teste sem instalar: `npm run pc` / `npm run servidor` (com `ARENA_TESTE=1` a tela de bloqueio fica pequena).

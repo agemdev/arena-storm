@@ -327,10 +327,13 @@ class PC {
         return { ok: true, msg: "Programa ativo de novo." };
       }
       case "desinstalar": {
-        if (!app.isPackaged) return { ok: false, msg: "Versão de teste: não há o que desinstalar (o instalador vem na fase 6b)." };
-        const desinstalador = path.join(path.dirname(app.getPath("exe")), `Uninstall ${app.getName()}.exe`);
+        if (!app.isPackaged) return { ok: false, msg: "Versão de teste (npm): não há o que desinstalar." };
+        const pasta = path.dirname(app.getPath("exe"));
+        const arq = require("node:fs").readdirSync(pasta).find((f) => /^Uninstall .*\.exe$/i.test(f));
+        if (!arq) return { ok: false, msg: "Desinstalador não encontrado. Use Configurações do Windows → Aplicativos." };
         this.enviar({ t: "estado_agente", senha, estado: "desativado" });
-        await shell.openPath(desinstalador);
+        require("./vigia").abrirComWindows(false);
+        await shell.openPath(path.join(pasta, arq));
         setTimeout(() => this.sair(), 1500);
         return { ok: true, msg: "Abrindo o desinstalador..." };
       }
@@ -355,10 +358,10 @@ class PC {
     };
   }
 
+  // Fechar autorizado (acesso mestre): o vigia não reabre
   sair() {
-    app.saindo = true;
     globalShortcut.unregisterAll();
-    app.quit();
+    require("./vigia").sairDeVerdade();
   }
 }
 

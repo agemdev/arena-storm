@@ -1,0 +1,46 @@
+{
+  "appId": "com.arenastorm.pc",
+  "directories": {
+    "output": "dist",
+    "buildResources": "build"
+  },
+  "files": [
+    "src/**",
+    "assets/**",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "assets/icone.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": true,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": false,
+    "include": "build/instalador.nsh",
+    "runAfterFinish": true,
+    "deleteAppDataOnUninstall": false,
+    "shortcutName": "Arena Storm PC",
+    "createDesktopShortcut": false,
+    "createStartMenuShortcut": false
+  },
+  "productName": "Arena Storm PC",
+  "extraMetadata": {
+    "productName": "Arena Storm PC"
+  },
+  "extraResources": [
+    {
+      "from": "build/modo-pc.json",
+      "to": "modo.json"
+    }
+  ],
+  "artifactName": "Instalar Arena Storm PC ${version}.${ext}"
+}

@@ -12,7 +12,14 @@ const TESTE = process.env.ARENA_TESTE === "1";
 const pastaBase = TESTE ? path.join(require("node:os").tmpdir(), "ArenaStormTeste") : path.join(app.getPath("appData"), "ArenaStorm");
 const arquivoModo = path.join(pastaBase, "modo.json");
 const argModo = process.argv.find((a) => a.startsWith("--modo="))?.split("=")[1];
-let modo = ["pc", "servidor"].includes(argModo) ? argModo : null;
+// Programa instalado: o instalador já diz o modo (resources/modo.json)
+let modoInstalado = null;
+try {
+  modoInstalado = JSON.parse(fs.readFileSync(path.join(process.resourcesPath, "modo.json"), "utf8")).modo;
+} catch {
+  /* versão de teste */
+}
+let modo = ["pc", "servidor"].includes(argModo) ? argModo : ["pc", "servidor"].includes(modoInstalado) ? modoInstalado : null;
 if (!modo) {
   try {
     modo = JSON.parse(fs.readFileSync(arquivoModo, "utf8")).modo;
@@ -26,14 +33,17 @@ app.setPath("userData", path.join(pastaBase, modo ?? "inicio"));
 if (!app.requestSingleInstanceLock()) app.quit();
 
 const PRELOAD = path.join(__dirname, "preload.js");
-const ICONE = path.join(__dirname, "..", "assets", "logo.jpg");
+const ICONE = path.join(__dirname, "..", "assets", "icone.png");
 let pc = null;
 let hub = null;
 let janelaServidor = null;
 let tray = null;
 
+const vigia = require("./vigia");
+
 app.whenReady().then(async () => {
   if (!modo) return escolherModo();
+  vigia.ligar(); // abre com o Windows + volta sozinho se fecharem à força
   if (modo === "pc") return iniciarPC();
   return iniciarServidor();
 });
@@ -134,10 +144,7 @@ function criarBandeja() {
       { label: "Abrir", click: () => janelaServidor?.show() },
       {
         label: "Fechar o Servidor",
-        click: () => {
-          app.saindo = true;
-          app.quit();
-        },
+        click: () => vigia.sairDeVerdade(),
       },
     ]),
   );

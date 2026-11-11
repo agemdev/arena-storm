@@ -1,0 +1,46 @@
+{
+  "appId": "com.arenastorm.servidor",
+  "directories": {
+    "output": "dist",
+    "buildResources": "build"
+  },
+  "files": [
+    "src/**",
+    "assets/**",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "assets/icone.png"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": true,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": false,
+    "include": "build/instalador.nsh",
+    "runAfterFinish": true,
+    "deleteAppDataOnUninstall": false,
+    "shortcutName": "Arena Storm Servidor",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  },
+  "productName": "Arena Storm Servidor",
+  "extraMetadata": {
+    "productName": "Arena Storm Servidor"
+  },
+  "extraResources": [
+    {
+      "from": "build/modo-servidor.json",
+      "to": "modo.json"
+    }
+  ],
+  "artifactName": "Instalar Arena Storm Servidor ${version}.${ext}"
+}
