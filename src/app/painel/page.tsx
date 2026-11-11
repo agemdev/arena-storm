@@ -7,13 +7,42 @@ import { fiadosAbertos } from "@/lib/caixa-servidor";
 import { janelaDoDia, SELECT_AGENDA, SITUACOES, TIPOS_AGENDA, type AgendaLinha } from "@/lib/agenda";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import AoVivo from "@/components/painel/AoVivo";
+import Indicadores from "@/components/painel/Indicadores";
+import EscolherPeriodo from "@/components/painel/EscolherPeriodo";
+import { dadosPeriodo, lerPeriodo } from "@/lib/relatorio";
 
 // Início do painel
-export default function PainelInicio() {
+export default function PainelInicio({ searchParams }: PageProps<"/painel">) {
   return (
-    <Suspense fallback={<p className="text-muted-foreground">Carregando...</p>}>
-      <Resumo />
-    </Suspense>
+    <div className="space-y-10">
+      <Suspense fallback={<p className="text-muted-foreground">Carregando...</p>}>
+        <Resumo />
+      </Suspense>
+      <Suspense fallback={<p className="text-muted-foreground">Carregando os números...</p>}>
+        <Dashboard searchParams={searchParams} />
+      </Suspense>
+    </div>
+  );
+}
+
+// Dashboard do período escolhido (padrão: este mês)
+async function Dashboard({ searchParams }: { searchParams: PageProps<"/painel">["searchParams"] }) {
+  const { supabase } = await exigirAdmin();
+  const sp = await searchParams;
+  const um = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const p = lerPeriodo(hojeISO(), um(sp.periodo) ?? "mes", um(sp.de), um(sp.ate));
+  const d = await dadosPeriodo(supabase, p);
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 className="font-display text-xl font-bold">📊 Números · {p.nome}</h2>
+        <Link href={`/painel/relatorios?de=${p.de}&ate=${p.ate}`} className="text-sm text-cyan hover:underline">
+          Gerar relatório →
+        </Link>
+      </div>
+      <EscolherPeriodo base="/painel" chave={p.chave} de={p.de} ate={p.ate} />
+      <Indicadores d={d} />
+    </div>
   );
 }
 

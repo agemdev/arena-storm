@@ -38,6 +38,9 @@ export async function salvarItem(_: Resultado, form: FormData): Promise<Resultad
     const preco = lerValor(String(form.get("preco") ?? ""));
     if (!(preco >= 0)) return { ok: false, msg: "Preço inválido. Ex: 6 ou 6,50" };
     dados.preco = preco;
+    // Categoria: primeira letra maiúscula ("bebidas" → "Bebidas")
+    const cat = String(form.get("categoria") ?? "").trim().replace(/\s+/g, " ").slice(0, 30);
+    dados.categoria = cat ? cat[0].toLocaleUpperCase("pt-BR") + cat.slice(1) : "Outros";
   } else {
     const tipo = String(form.get("tipo"));
     dados.tipo = tipo in TIPOS_EQUIP ? tipo : "outro";

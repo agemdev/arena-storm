@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import Janela from "@/components/painel/Janela";
 import UsoAoVivo from "@/components/painel/UsoAoVivo";
 import {
-  adicionarConsumo,
   colocarFiado,
   tirarFiado,
   desfazerCancelamento,
@@ -22,6 +21,7 @@ import { clientesComPacote, clientesComSaldo } from "@/lib/caixa-servidor";
 import AjustarValor from "./[id]/AjustarValor";
 import EditarAtendimento from "./[id]/EditarAtendimento";
 import Receber from "./[id]/Receber";
+import EscolherProduto, { type ProdutoOpcao } from "./EscolherProduto";
 
 type Detalhe = Omit<AtendimentoLinha, "consumos" | "pagamentos"> & {
   consumos: { id: string; descricao: string; quantidade: number; valor_unit: number; total: number }[];
@@ -50,7 +50,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
   const t = totais(a);
 
   const [produtos, equips, comSaldo, comPacote] = await Promise.all([
-    supabase.from("produtos").select("id, nome, preco").eq("ativo", true).order("ordem").order("nome"),
+    supabase.from("produtos").select("id, nome, preco, categoria").eq("ativo", true).order("ordem").order("nome"),
     supabase.from("equipamentos").select("id, nome").eq("ativo", true).order("ordem"),
     clientesComSaldo(supabase),
     clientesComPacote(supabase),
@@ -158,19 +158,8 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
             {/* Consumo */}
             <Secao titulo="Consumo">
               <div className="space-y-3">
-                {produtos.data?.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {produtos.data.map((p) => (
-                      <form key={p.id} action={adicionarConsumo}>
-                        <input type="hidden" name="atendimento_id" value={a.id} />
-                        <input type="hidden" name="produto_id" value={p.id} />
-                        <Button type="submit" variant="outline" size="sm">
-                          + {p.nome} <span className="text-muted-foreground">{reais(Number(p.preco))}</span>
-                        </Button>
-                      </form>
-                    ))}
-                  </div>
-                ) : (
+                <EscolherProduto atendimentoId={a.id} produtos={(produtos.data ?? []) as ProdutoOpcao[]} />
+                {!produtos.data?.length && (
                   <p className="text-sm text-muted-foreground">
                     Nenhum produto cadastrado.{" "}
                     <Link href="/painel/configuracoes/produtos" className="text-cyan hover:underline">

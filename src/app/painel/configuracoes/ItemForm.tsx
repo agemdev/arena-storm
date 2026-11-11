@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { TIPOS_EQUIP } from "@/lib/caixa";
 
-export type Item = { id: string; nome: string; ativo: boolean; ordem: number; preco?: number; tipo?: string; ip?: string | null; mac?: string | null };
+export type Item = { id: string; nome: string; ativo: boolean; ordem: number; preco?: number; categoria?: string; tipo?: string; ip?: string | null; mac?: string | null };
 
 // PC e Simulador têm o programa; os outros (PS5, Switch, VR) o Servidor testa por IP/MAC
 const SEM_PROGRAMA = ["console", "vr", "outro"];
@@ -29,6 +29,9 @@ export default function ItemForm({ tabela, item, proximaOrdem = 0 }: Props) {
       <input type="hidden" name="tabela" value={tabela} />
       {item && <input type="hidden" name="id" value={item.id} />}
       <Input name="nome" defaultValue={item?.nome} placeholder="Nome" required aria-label="Nome" className="w-40 flex-1" />
+      {produto && (
+        <Input name="categoria" list="categorias" defaultValue={item?.categoria ?? ""} placeholder="Categoria" aria-label="Categoria" title="Ex.: Bebidas, Lanches, Doces" className="w-32" />
+      )}
       {produto ? (
         <Input
           name="preco"

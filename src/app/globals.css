@@ -129,3 +129,22 @@
     animation: none;
   }
 }
+
+/* Impressão (relatórios): fundo branco, texto escuro, gráficos com cor */
+@media print {
+  :root {
+    --background: #ffffff;
+    --foreground: #111827;
+    --card: #ffffff;
+    --card-foreground: #111827;
+    --muted: #e5e7eb;
+    --muted-foreground: #4b5563;
+    --border: #d1d5db;
+  }
+  body {
+    background: #fff !important;
+    color: #111827 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

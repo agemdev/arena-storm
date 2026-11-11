@@ -214,6 +214,15 @@ export async function adicionarConsumo(form: FormData) {
   const { supabase, arenaId } = await exigirAdmin();
   const atendimentoId = String(form.get("atendimento_id"));
   const quantidade = Math.max(1, Math.min(50, Number(form.get("quantidade")) || 1));
+  // Produto digitado na hora (não cadastrado): nome + valor livres
+  if (!form.get("produto_id")) {
+    const descricao = String(form.get("descricao") ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
+    const valor = lerValor(String(form.get("valor") ?? ""));
+    if (descricao.length < 2 || !(valor > 0)) return;
+    await supabase.from("consumos").insert({ arena_id: arenaId, atendimento_id: atendimentoId, produto_id: null, descricao, quantidade, valor_unit: valor });
+    atualizar();
+    return;
+  }
   const { data: p } = await supabase.from("produtos").select("id, nome, preco").eq("id", String(form.get("produto_id"))).single();
   if (!p) return;
   await supabase.from("consumos").insert({

@@ -6,7 +6,7 @@ export default function ProdutosPage() {
     <ListaItens
       tabela="produtos"
       titulo="Produtos"
-      ajuda="Lanches e bebidas. Viram botões rápidos de consumo no Caixa. Preço aceita 6 ou 6,50."
+      ajuda="Lanches e bebidas. No Caixa dá para buscar pelo nome ou filtrar pela categoria (ex.: Bebidas, Lanches, Doces). Preço aceita 6 ou 6,50."
     />
   );
 }

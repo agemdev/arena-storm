@@ -14,20 +14,21 @@ export const metadata: Metadata = { title: "Painel – Arena Storm", robots: { i
 export default function PainelLayout({ children }: LayoutProps<"/painel">) {
   return (
     <div className="min-h-screen">
-      <header className="border-b border-border bg-elevated">
+      <header className="border-b border-border bg-elevated print:hidden">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
           <Link href="/painel">
             <Suspense fallback={<span className="font-display font-bold">Painel</span>}>
               <MarcaArena />
             </Suspense>
           </Link>
-          <nav className="flex gap-4 text-sm text-muted-foreground">
+          <nav className="flex gap-4 overflow-x-auto text-sm whitespace-nowrap text-muted-foreground">
             <Link href="/painel" className="hover:text-foreground">Início</Link>
             <Link href="/painel/maquinas" className="hover:text-foreground">Máquinas</Link>
             <Link href="/painel/caixa" className="hover:text-foreground">Caixa</Link>
             <Link href="/painel/agenda" className="hover:text-foreground">Agenda</Link>
             <Link href="/painel/clientes" className="hover:text-foreground">Clientes</Link>
             <Link href="/painel/ranking" className="hover:text-foreground">Ranking</Link>
+            <Link href="/painel/relatorios" className="hover:text-foreground">Relatórios</Link>
             <Link href="/painel/configuracoes" className="hover:text-foreground">Configurações</Link>
           </nav>
           <div className="ml-auto">
