@@ -51,3 +51,10 @@ export function agruparHorarios(lista: Horario[]) {
     hora: g.hora,
   }));
 }
+
+// Minutos jogados → "12h05" / "45 min"
+export function horas(minutos: number) {
+  if (minutos < 60) return `${minutos} min`;
+  const m = minutos % 60;
+  return `${Math.floor(minutos / 60)}h${m ? String(m).padStart(2, "0") : ""}`;
+}

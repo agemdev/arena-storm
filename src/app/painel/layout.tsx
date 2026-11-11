@@ -27,6 +27,7 @@ export default function PainelLayout({ children }: LayoutProps<"/painel">) {
             <Link href="/painel/caixa" className="hover:text-foreground">Caixa</Link>
             <Link href="/painel/agenda" className="hover:text-foreground">Agenda</Link>
             <Link href="/painel/clientes" className="hover:text-foreground">Clientes</Link>
+            <Link href="/painel/ranking" className="hover:text-foreground">Ranking</Link>
             <Link href="/painel/configuracoes" className="hover:text-foreground">Configurações</Link>
           </nav>
           <div className="ml-auto">
