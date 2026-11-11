@@ -116,6 +116,14 @@ export function totais(a: AtendimentoLinha) {
   return { cancelado, fiado, emUso, minutos: uso.minutos, valorUso, consumo, ajuste, total, pago, falta, status } as const;
 }
 
+// Quanto falta pagar: em uso com fim combinado → pelo tempo combinado (pagar adiantado)
+export function faltaParaPagar(a: AtendimentoLinha) {
+  const t = totais(a);
+  if (!t.emUso || !a.fim_previsto) return t.falta;
+  const previsto = calcularUso(a.inicio, a.fim_previsto, Number(a.valor_hora)).valor;
+  return Math.round((Math.max(0, previsto + t.consumo + t.ajuste) - t.pago) * 100) / 100;
+}
+
 export const SELECT_ATENDIMENTO =
   "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, fiado_em, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
 

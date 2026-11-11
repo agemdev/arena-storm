@@ -34,6 +34,25 @@ export async function salvarCliente(_: Resultado, form: FormData): Promise<Resul
   return { ok: true, msg: `${nome} cadastrado!` };
 }
 
+// Cadastro rápido (só nome + WhatsApp) direto do "Novo atendimento"
+export async function cadastroRapido(nomeBruto: string, whatsBruto: string) {
+  const { supabase, arenaId } = await exigirAdmin();
+  const nome = nomeBruto.trim().replace(/\s+/g, " ").slice(0, 60);
+  const whatsapp = normalizarWhats(whatsBruto);
+  if (nome.length < 2) return { ok: false, msg: "Digite o nome do cliente." } as const;
+  if (!whatsapp) return { ok: false, msg: "WhatsApp inválido. Use DDD + número, ex: (88) 99232-0187." } as const;
+
+  const { data, error } = await supabase.from("clientes").insert({ arena_id: arenaId, nome, whatsapp }).select("id, nome, whatsapp").single();
+  if (error?.code === "23505") {
+    // Já existia: usa o cadastro antigo
+    const { data: ja } = await supabase.from("clientes").select("id, nome, whatsapp").eq("whatsapp", whatsapp).maybeSingle();
+    if (ja) return { ok: true, msg: `Esse WhatsApp já era do(a) ${ja.nome}. Selecionado.`, cliente: ja } as const;
+  }
+  if (error || !data) return { ok: false, msg: "Erro ao cadastrar. Tente de novo." } as const;
+  revalidatePath("/painel", "layout");
+  return { ok: true, msg: `${nome} cadastrado!`, cliente: data } as const;
+}
+
 // Promoção / ação: dá minutos grátis ao cliente (fica no extrato como "Promoção")
 export async function darMinutos(_: Resultado, form: FormData): Promise<Resultado> {
   const { supabase, arenaId } = await exigirAdmin();

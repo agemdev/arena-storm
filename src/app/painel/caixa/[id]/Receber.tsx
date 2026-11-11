@@ -34,6 +34,8 @@ export default function Receber({ atendimentoId, falta, clienteId, minutosDe, co
     forma === "minutos" && pagador ? Math.min(falta, saldo) : forma === "pacote" && pagadorPac ? Math.min(falta, valorPac) : falta;
   const quem = forma === "pacote" ? pagadorPac : pagador;
   const sugestao = sugestaoMin > 0 ? sugestaoMin.toFixed(2).replace(".", ",") : "";
+  const [resto, setResto] = useState(""); // dividir: o que faltar vai nesta forma
+  const podeDividir = (forma === "minutos" || forma === "pacote") && !!quem && sugestaoMin < falta;
 
   return (
     <form key={res?.ok ? `${res.msg}${falta}` : "f"} action={acao} className="space-y-3">
@@ -89,6 +91,26 @@ export default function Receber({ atendimentoId, falta, clienteId, minutosDe, co
             vazio="Escolha o cliente..."
             horas
           />
+        </div>
+      )}
+      {podeDividir && (
+        <div className="space-y-1 rounded-lg border border-border p-2">
+          <input type="hidden" name="resto_forma" value={resto} />
+          <p className="text-xs text-muted-foreground">
+            O saldo não cobre tudo. O resto (<b>R$ {(falta - sugestaoMin).toFixed(2).replace(".", ",")}</b>) pagar em:
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {(["dinheiro", "pix", "cartao", ""] as const).map((f) => (
+              <button
+                key={f || "nao"}
+                type="button"
+                onClick={() => setResto(f)}
+                className={`rounded-full border px-3 py-1 text-xs ${resto === f ? "border-purple bg-primary/20 text-purple" : "border-border hover:bg-accent"}`}
+              >
+                {f ? FORMAS[f] : "Depois"}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { exigirAdmin } from "@/lib/auth";
 import {
   calcularUso,
+  faltaParaPagar,
   FORMAS,
   hojeISO,
   lerValor,
@@ -260,6 +261,21 @@ export async function receber(_: Resultado, form: FormData): Promise<Resultado> 
   if (error?.message.includes("insuficiente")) return { ok: false, msg: error.message };
   if (error?.message.includes("escolha de qual cliente")) return { ok: false, msg: "Escolha de qual cliente sai o saldo." };
   if (error) return { ok: false, msg: "Erro ao registrar pagamento." };
+
+  // Pagamento dividido: o que faltou depois dos minutos/pacote vai em dinheiro, Pix ou cartão
+  const resto = String(form.get("resto_forma") ?? "");
+  if ((forma === "minutos" || forma === "pacote") && ["dinheiro", "pix", "cartao"].includes(resto)) {
+    const { data } = await supabase.from("atendimentos").select(SELECT_ATENDIMENTO).eq("id", String(form.get("atendimento_id"))).single();
+    const falta = data ? faltaParaPagar(data as unknown as AtendimentoLinha) : 0;
+    if (falta > 0) {
+      const { error: e2 } = await supabase
+        .from("pagamentos")
+        .insert({ arena_id: arenaId, atendimento_id: String(form.get("atendimento_id")), forma: resto, valor: falta });
+      if (e2) return { ok: false, msg: "Minutos registrados, mas deu erro no resto. Receba o resto de novo." };
+      atualizar();
+      return { ok: true, msg: `Pago: ${valor.toFixed(2).replace(".", ",")} em ${FORMAS[forma as keyof typeof FORMAS]} + ${falta.toFixed(2).replace(".", ",")} em ${FORMAS[resto as keyof typeof FORMAS]}.` };
+    }
+  }
 
   atualizar();
   return { ok: true, msg: "Pagamento registrado!" };

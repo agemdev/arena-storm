@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { abrirAtendimento, type Resultado } from "./actions";
+import { cadastroRapido } from "../clientes/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,6 +113,16 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
               </li>
             ))}
           </ul>
+        )}
+        {!cliente && busca.trim().length >= 2 && (
+          <CadastroRapido
+            nome={busca}
+            semResultado={sugestoes.length === 0}
+            onCadastrado={(c) => {
+              setCliente(c);
+              setAberto(false);
+            }}
+          />
         )}
         <p className="text-xs text-muted-foreground">
           {cliente ? (
@@ -228,5 +239,66 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
 
       {res && <p className={`text-sm sm:col-span-6 ${res.ok ? "text-green" : "text-destructive"}`}>{res.msg}</p>}
     </form>
+  );
+}
+
+// Cliente não encontrado → cadastra ali mesmo (só nome + WhatsApp) e já seleciona
+function CadastroRapido({ nome, semResultado, onCadastrado }: { nome: string; semResultado: boolean; onCadastrado: (c: ClienteOpcao) => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [nomeNovo, setNomeNovo] = useState(nome);
+  const [whats, setWhats] = useState("");
+  const [msg, setMsg] = useState("");
+  const [enviando, iniciar] = useTransition();
+
+  const cadastrar = () =>
+    iniciar(async () => {
+      const r = await cadastroRapido(nomeNovo, whats);
+      setMsg(r.msg);
+      if (r.ok) onCadastrado(r.cliente);
+    });
+
+  if (!aberto)
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setNomeNovo(nome.trim());
+          setAberto(true);
+        }}
+        className={`text-xs hover:underline ${semResultado ? "font-semibold text-cyan" : "text-muted-foreground"}`}
+      >
+        {semResultado ? `Não encontrado. + Cadastrar “${nome.trim()}” agora` : "+ Cadastrar novo cliente"}
+      </button>
+    );
+
+  return (
+    <div className="space-y-2 rounded-lg border border-cyan/40 bg-cyan/5 p-3">
+      <p className="text-xs font-semibold text-cyan">Cadastro rápido</p>
+      <div className="flex flex-wrap gap-2">
+        <Input value={nomeNovo} onChange={(e) => setNomeNovo(e.target.value)} placeholder="Nome" aria-label="Nome do novo cliente" className="min-w-40 flex-1" />
+        <Input
+          value={whats}
+          onChange={(e) => setWhats(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault(); // não inicia o tempo antes de cadastrar
+              cadastrar();
+            }
+          }}
+          placeholder="WhatsApp (88) 9..."
+          inputMode="tel"
+          aria-label="WhatsApp do novo cliente"
+          autoFocus
+          className="w-44"
+        />
+        <Button type="button" size="sm" onClick={cadastrar} disabled={enviando}>
+          {enviando ? "Salvando..." : "Cadastrar"}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" onClick={() => setAberto(false)}>
+          Cancelar
+        </Button>
+      </div>
+      {msg && <p className="text-xs text-destructive">{msg}</p>}
+    </div>
   );
 }

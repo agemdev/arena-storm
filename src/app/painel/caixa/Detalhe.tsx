@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
 import { reais } from "@/lib/formatos";
-import { duracao, FORMAS, FUSO, hhmm, totais, type AtendimentoLinha, type Forma } from "@/lib/caixa";
+import { duracao, faltaParaPagar, FORMAS, FUSO, hhmm, totais, type AtendimentoLinha, type Forma } from "@/lib/caixa";
 import { Button } from "@/components/ui/button";
 import Janela from "@/components/painel/Janela";
 import UsoAoVivo from "@/components/painel/UsoAoVivo";
@@ -246,7 +246,14 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                   <p className="text-xs">{t.fiado ? "No fiado (falta)" : t.falta > 0 ? "Falta receber" : t.falta < 0 ? "Troco / pago a mais" : "Tudo pago"}</p>
                   <p className="font-display text-2xl font-bold">{reais(Math.abs(t.falta))}</p>
                 </div>
-                {t.emUso && <p className="text-xs text-muted-foreground">Ainda em uso: encerre antes de receber o valor final.</p>}
+                {t.emUso &&
+                  (a.fim_previsto ? (
+                    <p className="text-xs text-muted-foreground">
+                      Em uso: pode receber agora o tempo combinado (até {hhmm(a.fim_previsto)}) = <b>{reais(faltaParaPagar(a))}</b>. Dá para dividir: parte em minutos, resto em dinheiro.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Tempo livre em uso: encerre antes de receber o valor final.</p>
+                  ))}
                 {/* Fiado: pendura na conta do cliente cadastrado */}
                 {t.fiado ? (
                   <div className="flex flex-wrap items-center gap-2 rounded-lg border border-purple/40 bg-purple/10 p-2 text-sm text-purple">
@@ -273,7 +280,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                   ))
                 )}
                 {!t.emUso && <AjustarValor id={a.id} calculado={t.valorUso + t.consumo} total={t.total} temAjuste={t.ajuste !== 0} />}
-                <Receber atendimentoId={a.id} falta={t.falta} clienteId={a.cliente_id} minutosDe={a.minutos_de} comSaldo={comSaldo} pacoteDe={a.pacote_de} comPacote={comPacote} valorHora={Number(a.valor_hora)} />
+                <Receber atendimentoId={a.id} falta={faltaParaPagar(a)} clienteId={a.cliente_id} minutosDe={a.minutos_de} comSaldo={comSaldo} pacoteDe={a.pacote_de} comPacote={comPacote} valorHora={Number(a.valor_hora)} />
 
                 {a.pagamentos.length > 0 && (
                   <ul className="divide-y divide-border rounded-lg border border-border text-sm">
