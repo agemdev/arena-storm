@@ -44,11 +44,11 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 - [x] M4 Caixa/consumo + Banco de Minutos
 - [x] M5 Painel de máquinas (realtime)
 - [x] M6 Agente Electron + hub no PC Servidor (substitui Gizmo)
-- [ ] M7 Ranking + consulta de saldo/horas
+- [x] M7 Ranking + consulta de saldo/horas (+ dashboard e relatórios)
 - [ ] M8 SaaS multi-arena
 
 ## Status
-Milestone atual: M7 Ranking + consulta de saldo/horas (M0–M6 concluídos; falta instalar o programa nos outros PCs e tirar o Gizmo). Dados da arena: painel → Configurações (banco); textos fixos em `src/lib/arena.ts`.
+Milestone atual: M8 SaaS multi-arena (M0–M7 concluídos). Dados da arena: painel → Configurações (banco); textos fixos em `src/lib/arena.ts`.
 Repo: https://github.com/agemdev/arena-storm
 Site: https://arena-storm.vercel.app (Vercel equipe `agemdev`) · Supabase: projeto `fwjwowvblkukqroyqoca` (sa-east-1)
 Migrations: `supabase/migrations/` (aplicar via conector Supabase)
