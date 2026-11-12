@@ -49,11 +49,12 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
   const a = data as unknown as Detalhe;
   const t = totais(a);
 
-  const [produtos, equips, comSaldo, comPacote] = await Promise.all([
+  const [produtos, equips, comSaldo, comPacote, clientes] = await Promise.all([
     supabase.from("produtos").select("id, nome, preco, categoria").eq("ativo", true).order("ordem").order("nome"),
     supabase.from("equipamentos").select("id, nome").eq("ativo", true).order("ordem"),
     clientesComSaldo(supabase),
     clientesComPacote(supabase),
+    supabase.from("clientes").select("id, nome, whatsapp").order("nome"),
   ]);
   const saldoMinutos = a.cliente_id ? (comSaldo.find((c) => c.id === a.cliente_id)?.saldo ?? 0) : null;
   const pacoteCom = a.pacote_de ? (comPacote.find((c) => c.id === a.pacote_de) ?? { nome: "cliente sem pacote", saldo: 0 }) : null;
@@ -190,7 +191,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
 
             {/* Correções */}
             <details className="rounded-xl border border-border p-4">
-              <summary className="cursor-pointer font-semibold">Corrigir dados (nome, máquina, horários, observação)</summary>
+              <summary className="cursor-pointer font-semibold">Corrigir dados (cliente, máquina, horários, observação)</summary>
               <div className="mt-4">
                 <EditarAtendimento
                   id={a.id}
@@ -208,6 +209,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                   comSaldo={comSaldo}
                   pacoteDe={a.pacote_de ?? ""}
                   comPacote={comPacote}
+                  clientes={clientes.data ?? []}
                   equipamentos={equips.data ?? []}
                 />
               </div>

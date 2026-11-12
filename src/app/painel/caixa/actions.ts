@@ -134,10 +134,12 @@ export async function situacaoTempos() {
 export async function salvarAtendimento(_: Resultado, form: FormData): Promise<Resultado> {
   const { supabase } = await exigirAdmin();
   const id = String(form.get("id"));
-  const { data: a } = await supabase.from("atendimentos").select("data, inicio, fim").eq("id", id).single();
+  const { data: a } = await supabase.from("atendimentos").select("data, inicio, fim, fiado_em").eq("id", id).single();
   if (!a) return { ok: false, msg: "Atendimento não encontrado." };
 
   const nome = String(form.get("nome") ?? "").trim().replace(/\s+/g, " ").slice(0, 60);
+  const clienteId = uuidOuNulo(form.get("cliente_id")); // vazio = avulso
+  if (a.fiado_em && !clienteId) return { ok: false, msg: "Está no fiado: tire do fiado antes de deixar avulso." };
   const modo = String(form.get("equipamento_id") ?? "");
   const comTempo = modo !== "";
   const equipamentoId = comTempo && modo !== "livre" ? modo : null;
@@ -161,6 +163,7 @@ export async function salvarAtendimento(_: Resultado, form: FormData): Promise<R
     .from("atendimentos")
     .update({
       nome,
+      cliente_id: clienteId,
       equipamento_id: equipamentoId,
       inicio,
       fim: comTempo ? fim : null,

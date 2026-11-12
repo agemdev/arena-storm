@@ -9,6 +9,7 @@ import { NativeSelect, Textarea } from "@/components/ui/native-select";
 import { calcularUso, duracao, DURACOES, lerValor, paraTimestamp, somarMinutosHora, type ComSaldo } from "@/lib/caixa";
 import UsarMinutos from "@/components/painel/UsarMinutos";
 import { reais } from "@/lib/formatos";
+import EscolherCliente, { type ClienteOpcao } from "@/components/painel/EscolherCliente";
 
 type Props = {
   id: string;
@@ -27,6 +28,7 @@ type Props = {
   comSaldo: ComSaldo[];
   pacoteDe: string;
   comPacote: ComSaldo[];
+  clientes: ClienteOpcao[];
 };
 
 // Corrigir dados a qualquer momento (mesmo em uso). O valor do uso é recalculado pelos horários.
@@ -39,6 +41,7 @@ export default function EditarAtendimento(p: Props) {
   const [vh, setVh] = useState(p.valorHora);
   const [minDe, setMinDe] = useState(p.minutosDe);
   const [pacDe, setPacDe] = useState(p.pacoteDe);
+  const [clienteAtual, setClienteAtual] = useState(p.clienteId);
   const comTempo = modo !== "";
   const encerrado = !p.emUso && !!p.fim;
 
@@ -53,9 +56,14 @@ export default function EditarAtendimento(p: Props) {
   return (
     <form action={acao} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <input type="hidden" name="id" value={p.id} />
-      <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor="e-nome">Nome</Label>
-        <Input id="e-nome" name="nome" defaultValue={p.nome} required />
+      <div className="sm:col-span-2">
+        {/* Trocar o cliente: escolher cadastrado, cadastrar na hora ou deixar avulso */}
+        <EscolherCliente
+          id="e-nome"
+          clientes={p.clientes}
+          inicial={{ cliente: p.clientes.find((c) => c.id === p.clienteId) ?? null, nome: p.nome }}
+          onChange={(c) => setClienteAtual(c?.id ?? null)}
+        />
       </div>
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="e-equip">Máquina</Label>
@@ -119,9 +127,9 @@ export default function EditarAtendimento(p: Props) {
       {comTempo && (
         <div className="space-y-2 sm:col-span-2 lg:col-span-4">
           <Label htmlFor="e-pac">Usar pacote de horas de</Label>
-          <UsarMinutos id="e-pac" comSaldo={p.comPacote} name="pacote_de" value={pacDe} onChange={setPacDe} primeiro={p.clienteId} vazio="Não usar pacote" horas />
+          <UsarMinutos id="e-pac" comSaldo={p.comPacote} name="pacote_de" value={pacDe} onChange={setPacDe} primeiro={clienteAtual} vazio="Não usar pacote" horas />
           <Label htmlFor="e-min">Pagar com minutos de</Label>
-          <UsarMinutos id="e-min" comSaldo={p.comSaldo} name="minutos_de" value={minDe} onChange={setMinDe} primeiro={p.clienteId} />
+          <UsarMinutos id="e-min" comSaldo={p.comSaldo} name="minutos_de" value={minDe} onChange={setMinDe} primeiro={clienteAtual} />
           <p className="text-xs text-muted-foreground">
             {encerrado ? "Já encerrado: para cobrar agora, use Receber → Pacote ou Minutos." : "Ao encerrar, desconta sozinho: primeiro o pacote (tempo), depois os minutos (R$)."}
           </p>

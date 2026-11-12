@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { abrirAtendimento, type Resultado } from "./actions";
-import { cadastroRapido } from "../clientes/actions";
+import EscolherCliente, { type ClienteOpcao } from "@/components/painel/EscolherCliente";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { duracao, DURACOES, somarMinutosHora, type ComSaldo } from "@/lib/caixa";
 import UsarMinutos from "@/components/painel/UsarMinutos";
 
-export type ClienteOpcao = { id: string; nome: string; whatsapp: string };
+export type { ClienteOpcao };
 export type EquipOpcao = { id: string; nome: string; emUso: boolean; reserva?: string; tv?: string; bloqueio?: string }; // reserva = "20:00"; tv = quem usa a TV dividida; bloqueio = "Manutenção"
 
 type Props = {
@@ -47,9 +47,7 @@ type CamposProps = Props & {
 };
 
 function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, comSaldo = [], comPacote = [], res, acao, enviando }: CamposProps) {
-  const [busca, setBusca] = useState("");
   const [cliente, setCliente] = useState<ClienteOpcao | null>(null);
-  const [aberto, setAberto] = useState(false);
   const [equip, setEquip] = useState(equipInicial ?? "livre"); // livre = tempo sem máquina fixa
   const [ini, setIni] = useState(agora);
   const [prev, setPrev] = useState(""); // fim previsto (vazio = tempo livre)
@@ -58,15 +56,6 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
   const comTempo = equip !== "";
   const escolhida = equipamentos.find((e) => e.id === equip);
 
-  // Até 8 clientes que batem com o nome ou número digitado
-  const sugestoes = useMemo(() => {
-    const t = busca.trim().toLowerCase();
-    if (t.length < 2 || cliente) return [];
-    const d = t.replace(/\D/g, "");
-    return clientes
-      .filter((c) => c.nome.toLowerCase().includes(t) || (d.length >= 3 && c.whatsapp.includes(d)))
-      .slice(0, 8);
-  }, [busca, cliente, clientes]);
 
   return (
     <form
@@ -74,65 +63,9 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
       className="grid gap-4 sm:grid-cols-6 sm:items-start"
     >
       <input type="hidden" name="data" value={data} />
-      <input type="hidden" name="cliente_id" value={cliente?.id ?? ""} />
 
-      <div className="relative space-y-2 sm:col-span-6">
-        <Label htmlFor="nome">Cliente</Label>
-        <Input
-          id="nome"
-          name="nome"
-          value={cliente ? cliente.nome : busca}
-          onChange={(e) => {
-            setCliente(null);
-            setBusca(e.target.value);
-            setAberto(true);
-          }}
-          onFocus={() => setAberto(true)}
-          onBlur={() => setTimeout(() => setAberto(false), 150)}
-          placeholder="Nome ou WhatsApp"
-          autoComplete="off"
-          autoFocus
-          required
-        />
-        {aberto && sugestoes.length > 0 && (
-          <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-lg">
-            {sugestoes.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  className="flex w-full justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setCliente(c);
-                    setAberto(false);
-                  }}
-                >
-                  <span>{c.nome}</span>
-                  <span className="text-muted-foreground">{c.whatsapp.slice(-4)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {!cliente && busca.trim().length >= 2 && (
-          <CadastroRapido
-            nome={busca}
-            semResultado={sugestoes.length === 0}
-            onCadastrado={(c) => {
-              setCliente(c);
-              setAberto(false);
-            }}
-          />
-        )}
-        <p className="text-xs text-muted-foreground">
-          {cliente ? (
-            <span className="text-green">✓ Cliente cadastrado (ganha minutos)</span>
-          ) : busca.trim() ? (
-            "Avulso: não ganha minutos. Escolha da lista se for cadastrado."
-          ) : (
-            "Digite para buscar clientes cadastrados."
-          )}
-        </p>
+      <div className="sm:col-span-6">
+        <EscolherCliente clientes={clientes} onChange={setCliente} autoFocus />
       </div>
 
       <div className="space-y-2 sm:col-span-6">
@@ -242,63 +175,3 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
   );
 }
 
-// Cliente não encontrado → cadastra ali mesmo (só nome + WhatsApp) e já seleciona
-function CadastroRapido({ nome, semResultado, onCadastrado }: { nome: string; semResultado: boolean; onCadastrado: (c: ClienteOpcao) => void }) {
-  const [aberto, setAberto] = useState(false);
-  const [nomeNovo, setNomeNovo] = useState(nome);
-  const [whats, setWhats] = useState("");
-  const [msg, setMsg] = useState("");
-  const [enviando, iniciar] = useTransition();
-
-  const cadastrar = () =>
-    iniciar(async () => {
-      const r = await cadastroRapido(nomeNovo, whats);
-      setMsg(r.msg);
-      if (r.ok) onCadastrado(r.cliente);
-    });
-
-  if (!aberto)
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setNomeNovo(nome.trim());
-          setAberto(true);
-        }}
-        className={`text-xs hover:underline ${semResultado ? "font-semibold text-cyan" : "text-muted-foreground"}`}
-      >
-        {semResultado ? `Não encontrado. + Cadastrar “${nome.trim()}” agora` : "+ Cadastrar novo cliente"}
-      </button>
-    );
-
-  return (
-    <div className="space-y-2 rounded-lg border border-cyan/40 bg-cyan/5 p-3">
-      <p className="text-xs font-semibold text-cyan">Cadastro rápido</p>
-      <div className="flex flex-wrap gap-2">
-        <Input value={nomeNovo} onChange={(e) => setNomeNovo(e.target.value)} placeholder="Nome" aria-label="Nome do novo cliente" className="min-w-40 flex-1" />
-        <Input
-          value={whats}
-          onChange={(e) => setWhats(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault(); // não inicia o tempo antes de cadastrar
-              cadastrar();
-            }
-          }}
-          placeholder="WhatsApp (88) 9..."
-          inputMode="tel"
-          aria-label="WhatsApp do novo cliente"
-          autoFocus
-          className="w-44"
-        />
-        <Button type="button" size="sm" onClick={cadastrar} disabled={enviando}>
-          {enviando ? "Salvando..." : "Cadastrar"}
-        </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={() => setAberto(false)}>
-          Cancelar
-        </Button>
-      </div>
-      {msg && <p className="text-xs text-destructive">{msg}</p>}
-    </div>
-  );
-}
