@@ -6,7 +6,8 @@ import { hojeISO } from "@/lib/caixa";
 import { reais } from "@/lib/formatos";
 import { dataBr, maisDias, NOME_SISTEMA, PLANOS_LICENCA, SITUACOES_LICENCA, type PlanoLicenca, type SituacaoLicenca } from "@/lib/sistema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Apagar, EditarLicenca, NovaArena, NovoAdmin, Pagamento, type ArenaDono } from "./Formularios";
+import { Apagar, Cobranca, EditarLicenca, NovaArena, NovoAdmin, Pagamento, TokenWebhook, type ArenaDono } from "./Formularios";
+import { asaasConfigurado } from "@/lib/asaas";
 
 export const metadata: Metadata = { title: "Dono do sistema" };
 
@@ -29,7 +30,8 @@ export default function DonoPage() {
 
 async function Conteudo() {
   const { supabase } = await exigirDono();
-  const { data } = await supabase.rpc("arenas_do_sistema");
+  const [{ data }, { data: tokenOk }] = await Promise.all([supabase.rpc("arenas_do_sistema"), supabase.rpc("token_asaas_definido")]);
+  const chaveOk = asaasConfigurado();
   const arenas = (data ?? []) as Linha[];
   const hoje = hojeISO();
 
@@ -46,6 +48,24 @@ async function Conteudo() {
         <Numero titulo="Vencendo / tolerância" valor={String(conta(["avisar", "tolerancia"]))} alerta />
         <Numero titulo="Só consulta / apagar" valor={String(conta(["consulta", "apagar"]))} alerta />
       </div>
+
+      {/* Ligação com o Asaas (cobrança automática) */}
+      <details className="rounded-xl border border-border bg-card p-4" open={!chaveOk || !tokenOk}>
+        <summary className="cursor-pointer font-semibold">
+          🔁 Cobrança automática (Asaas) · {chaveOk && tokenOk ? <span className="text-green">pronta</span> : <span className="text-amber">falta configurar</span>}
+        </summary>
+        <div className="mt-3 space-y-3 text-sm">
+          <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+            <li>
+              Chave da API na Vercel (variável <code>ASAAS_API_KEY</code>): {chaveOk ? <b className="text-green">✓ configurada</b> : <b className="text-amber">falta</b>}
+            </li>
+            <li>
+              No Asaas → Integrações → Webhooks: URL <code className="select-all">https://arena-storm.vercel.app/api/asaas</code>, eventos de cobrança, e o código abaixo como token.
+            </li>
+          </ol>
+          <TokenWebhook definido={!!tokenOk} />
+        </div>
+      </details>
 
       <details className="rounded-xl border border-border bg-card p-4">
         <summary className="cursor-pointer font-semibold">+ Nova arena cliente</summary>
@@ -80,6 +100,11 @@ async function Conteudo() {
                   <Painel titulo="💰 Registrar pagamento">
                     <Pagamento a={a} hoje={hoje} />
                   </Painel>
+                  {a.plano !== "cortesia" && (
+                    <Painel titulo={a.asaas_assinatura_id ? "🔁 Cobrança automática ✓" : "🔁 Cobrança automática"}>
+                      <Cobranca a={a} hoje={hoje} />
+                    </Painel>
+                  )}
                   <Painel titulo="✏️ Editar licença">
                     <EditarLicenca a={a} />
                   </Painel>

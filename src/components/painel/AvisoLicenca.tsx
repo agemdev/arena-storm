@@ -10,7 +10,7 @@ export default async function AvisoLicenca() {
     supabase.rpc("licenca_situacao", { p_arena: arenaId }),
     supabase.from("donos_sistema").select("user_id").maybeSingle(),
   ]);
-  const l = (data as { plano: string; vence_em: string | null; situacao: string; dias: number | null }[] | null)?.[0];
+  const l = (data as { plano: string; vence_em: string | null; situacao: string; dias: number | null; link_pagamento: string | null }[] | null)?.[0];
   const linkDono = dono.data ? (
     <Link href="/painel/dono" className="ml-auto shrink-0 rounded-full bg-purple/20 px-3 py-0.5 text-xs font-semibold text-purple print:hidden">
       👑 Dono do sistema
@@ -45,8 +45,13 @@ export default async function AvisoLicenca() {
     <div className={`border-b px-4 py-2 text-sm print:hidden ${t.cor}`}>
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
         <span className="font-semibold">{t.msg}</span>
+        {l.link_pagamento && (
+          <a href={l.link_pagamento} target="_blank" rel="noopener" className="rounded-full bg-green px-3 py-0.5 font-semibold text-black">
+            💳 Pagar agora (Pix, boleto ou cartão)
+          </a>
+        )}
         <a href={renovar} target="_blank" rel="noopener" className="rounded-full bg-background/60 px-3 py-0.5 font-semibold underline">
-          Renovar pelo WhatsApp
+          {l.link_pagamento ? "Dúvidas? WhatsApp" : "Renovar pelo WhatsApp"}
         </a>
         {linkDono}
       </div>

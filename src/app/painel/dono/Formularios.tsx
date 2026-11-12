@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { PLANOS_LICENCA } from "@/lib/sistema";
-import { adicionarAdmin, apagarArena, criarArena, editarLicenca, registrarPagamento, type Resultado } from "./actions";
+import { adicionarAdmin, apagarArena, ativarCobranca, cancelarCobranca, criarArena, editarLicenca, gerarTokenWebhook, registrarPagamento, type Resultado } from "./actions";
 
 export type ArenaDono = {
   id: string;
@@ -18,6 +18,12 @@ export type ArenaDono = {
   responsavel: string | null;
   contato: string | null;
   obs: string | null;
+  cpf_cnpj: string | null;
+  email: string | null;
+  celular: string | null;
+  asaas_assinatura_id: string | null;
+  cobranca_vence: string | null;
+  link_pagamento: string | null;
 };
 
 function Msg({ res }: { res: Resultado }) {
@@ -178,6 +184,90 @@ export function Apagar({ a }: { a: ArenaDono }) {
         </Button>
       </div>
       <Msg res={res} />
+    </form>
+  );
+}
+
+// Código secreto do webhook (mostra uma vez para copiar no Asaas)
+export function TokenWebhook({ definido }: { definido: boolean }) {
+  const [res, acao, enviando] = useActionState(gerarTokenWebhook, null);
+  return (
+    <form action={acao} className="space-y-2">
+      {res?.ok ? (
+        <div className="space-y-1 rounded-lg border border-amber/50 bg-amber/10 p-3 text-sm">
+          <p className="font-semibold text-amber">Copie agora (não aparece de novo) e cole no Asaas → Webhook → “Token de autenticação”:</p>
+          <code className="block rounded bg-background/70 p-2 font-mono break-all select-all">{res.msg}</code>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">{definido ? "✓ Código já criado. Gere outro só se perdeu (aí troque também no Asaas)." : "Ainda sem código."}</p>
+      )}
+      <Button type="submit" size="sm" variant="outline" disabled={enviando}>
+        {definido ? "Gerar novo código" : "Gerar código do webhook"}
+      </Button>
+      {res && !res.ok && <Msg res={res} />}
+    </form>
+  );
+}
+
+// Ligar / desligar a cobrança automática de uma arena
+export function Cobranca({ a, hoje }: { a: ArenaDono; hoje: string }) {
+  const [res, acao, enviando] = useActionState(ativarCobranca, null);
+  const [resC, cancelar, cancelando] = useActionState(cancelarCobranca, null);
+  if (a.asaas_assinatura_id)
+    return (
+      <div className="space-y-2 text-sm">
+        <p className="text-green">✓ Cobrança automática ligada ({a.asaas_assinatura_id}). A licença renova sozinha quando o pagamento cai.</p>
+        {a.link_pagamento && (
+          <p>
+            Fatura em aberto{a.cobranca_vence ? ` (vence ${a.cobranca_vence.split("-").reverse().join("/")})` : ""}:{" "}
+            <a href={a.link_pagamento} target="_blank" rel="noopener" className="text-cyan underline">
+              abrir
+            </a>
+          </p>
+        )}
+        <form action={cancelar} className="flex items-center gap-3">
+          <input type="hidden" name="arena_id" value={a.id} />
+          <Button type="submit" size="sm" variant="destructive" disabled={cancelando}>
+            Desligar cobrança automática
+          </Button>
+          <Msg res={resC} />
+        </form>
+      </div>
+    );
+  const primeira = a.vence_em && a.vence_em > hoje ? a.vence_em : hoje;
+  return (
+    <form action={acao} className="grid gap-2 sm:grid-cols-3">
+      <input type="hidden" name="arena_id" value={a.id} />
+      <Campo id={`c-resp-${a.id}`} rotulo="Quem paga (nome)">
+        <Input id={`c-resp-${a.id}`} name="responsavel" defaultValue={a.responsavel ?? ""} required />
+      </Campo>
+      <Campo id={`c-doc-${a.id}`} rotulo="CPF ou CNPJ">
+        <Input id={`c-doc-${a.id}`} name="cpf_cnpj" inputMode="numeric" defaultValue={a.cpf_cnpj ?? ""} required />
+      </Campo>
+      <Campo id={`c-email-${a.id}`} rotulo="E-mail (recebe a fatura)">
+        <Input id={`c-email-${a.id}`} name="email" type="email" defaultValue={a.email ?? ""} required />
+      </Campo>
+      <Campo id={`c-cel-${a.id}`} rotulo="Celular (opcional)">
+        <Input id={`c-cel-${a.id}`} name="celular" inputMode="tel" defaultValue={a.celular ?? ""} />
+      </Campo>
+      <Campo id={`c-plano-${a.id}`} rotulo="Período">
+        <SelectPlano id={`c-plano-${a.id}`} valor={a.plano === "cortesia" ? "mensal" : (a.plano ?? "mensal")} semCortesia />
+      </Campo>
+      <Campo id={`c-valor-${a.id}`} rotulo="Valor (R$)">
+        <Input id={`c-valor-${a.id}`} name="valor" inputMode="decimal" defaultValue={a.valor ? String(a.valor).replace(".", ",") : ""} required />
+      </Campo>
+      <Campo id={`c-prim-${a.id}`} rotulo="Primeira cobrança vence em">
+        <Input id={`c-prim-${a.id}`} name="primeira" type="date" defaultValue={primeira} min={hoje} required />
+      </Campo>
+      <div className="flex items-end sm:col-span-2">
+        <Button type="submit" size="sm" disabled={enviando}>
+          {enviando ? "Ligando..." : "Ligar cobrança automática"}
+        </Button>
+      </div>
+      <div className="sm:col-span-3">
+        <p className="text-xs text-muted-foreground">O Asaas manda a fatura (Pix, boleto ou cartão) para o e-mail. Quando pagar, a licença renova sozinha.</p>
+        <Msg res={res} />
+      </div>
     </form>
   );
 }

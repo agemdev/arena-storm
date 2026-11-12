@@ -5,7 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 import { exigirDono } from "@/lib/auth";
 import { lerValor } from "@/lib/caixa";
 import { normalizarWhats } from "@/lib/whatsapp";
-import { PLANOS_LICENCA } from "@/lib/sistema";
+import { NOME_SISTEMA, PLANOS_LICENCA } from "@/lib/sistema";
+import { asaas, CICLOS } from "@/lib/asaas";
 
 export type Resultado = { ok: boolean; msg: string } | null;
 
@@ -141,4 +142,88 @@ export async function apagarArena(_: Resultado, form: FormData): Promise<Resulta
   if (error) return { ok: false, msg: erroBanco(error.message) };
   atualizar();
   return { ok: true, msg: "Arena apagada." };
+}
+
+// ---------- Cobrança automática (Asaas) ----------
+
+// Gera o código secreto do webhook (aparece uma vez para copiar no Asaas)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function gerarTokenWebhook(_: Resultado): Promise<Resultado> {
+  const { supabase } = await exigirDono();
+  const { data, error } = await supabase.rpc("gerar_token_asaas");
+  if (error) return { ok: false, msg: erroBanco(error.message) };
+  return { ok: true, msg: String(data) };
+}
+
+// Liga a cobrança automática: cria o cliente e a assinatura no Asaas
+export async function ativarCobranca(_: Resultado, form: FormData): Promise<Resultado> {
+  const { supabase } = await exigirDono();
+  const arenaId = String(form.get("arena_id"));
+  const doc = String(form.get("cpf_cnpj") ?? "").replace(/\D/g, "");
+  const email = String(form.get("email") ?? "").trim().toLowerCase();
+  const celular = String(form.get("celular") ?? "").replace(/\D/g, "");
+  const nome = String(form.get("responsavel") ?? "").trim();
+  const plano = String(form.get("plano"));
+  const valor = lerValor(String(form.get("valor") ?? ""));
+  const primeira = String(form.get("primeira") ?? "");
+
+  if (nome.length < 3) return { ok: false, msg: "Nome do responsável (quem paga)." };
+  if (doc.length !== 11 && doc.length !== 14) return { ok: false, msg: "CPF (11 números) ou CNPJ (14 números)." };
+  if (!/^\S+@\S+\.\S+$/.test(email)) return { ok: false, msg: "E-mail inválido (a fatura vai para ele)." };
+  if (!(plano in CICLOS)) return { ok: false, msg: "Escolha mensal, trimestral, semestral ou anual." };
+  if (!(valor > 0)) return { ok: false, msg: "Valor da licença." };
+  if (!DATA.test(primeira)) return { ok: false, msg: "Data da primeira cobrança." };
+
+  const { data: l } = await supabase.from("licencas").select("asaas_cliente_id, asaas_assinatura_id, arenas(nome)").eq("arena_id", arenaId).single();
+  if (!l) return { ok: false, msg: "Licença não encontrada." };
+  if (l.asaas_assinatura_id) return { ok: false, msg: "A cobrança automática já está ligada. Desligue antes para mudar." };
+  const arenaNome = (l.arenas as unknown as { nome: string } | null)?.nome ?? "Arena";
+
+  // Guarda os dados de quem paga
+  await supabase.from("licencas").update({ responsavel: nome, cpf_cnpj: doc, email, celular: celular || null, plano, valor }).eq("arena_id", arenaId);
+
+  let clienteId = l.asaas_cliente_id as string | null;
+  if (!clienteId) {
+    const c = await asaas<{ id: string }>("POST", "/customers", {
+      name: nome,
+      cpfCnpj: doc,
+      email,
+      mobilePhone: celular || undefined,
+      company: arenaNome,
+      externalReference: arenaId,
+    });
+    if (!c.ok) return { ok: false, msg: c.erro };
+    clienteId = c.dados.id;
+    await supabase.from("licencas").update({ asaas_cliente_id: clienteId }).eq("arena_id", arenaId);
+  }
+
+  const a = await asaas<{ id: string }>("POST", "/subscriptions", {
+    customer: clienteId,
+    billingType: "UNDEFINED", // o cliente escolhe Pix, boleto ou cartão na fatura
+    value: valor,
+    nextDueDate: primeira,
+    cycle: CICLOS[plano as keyof typeof CICLOS],
+    description: `Licença ${PLANOS_LICENCA[plano as keyof typeof PLANOS_LICENCA].nome} – ${NOME_SISTEMA} – ${arenaNome}`,
+    externalReference: arenaId,
+  });
+  if (!a.ok) return { ok: false, msg: a.erro };
+  await supabase.from("licencas").update({ asaas_assinatura_id: a.dados.id }).eq("arena_id", arenaId);
+  atualizar();
+  return { ok: true, msg: "Cobrança automática ligada! O Asaas envia a fatura ao e-mail do cliente." };
+}
+
+// Desliga a cobrança automática (remove a assinatura no Asaas; cobranças já pagas não mudam)
+export async function cancelarCobranca(_: Resultado, form: FormData): Promise<Resultado> {
+  const { supabase } = await exigirDono();
+  const arenaId = String(form.get("arena_id"));
+  const { data: l } = await supabase.from("licencas").select("asaas_assinatura_id").eq("arena_id", arenaId).single();
+  if (!l?.asaas_assinatura_id) return { ok: false, msg: "Não há cobrança automática ligada." };
+  const r = await asaas("DELETE", `/subscriptions/${l.asaas_assinatura_id}`);
+  if (!r.ok) return { ok: false, msg: r.erro };
+  await supabase
+    .from("licencas")
+    .update({ asaas_assinatura_id: null, cobranca_id: null, cobranca_vence: null, link_pagamento: null })
+    .eq("arena_id", arenaId);
+  atualizar();
+  return { ok: true, msg: "Cobrança automática desligada." };
 }
