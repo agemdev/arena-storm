@@ -34,3 +34,11 @@ export async function exigirAdmin() {
       : CIDADE_PADRAO,
   };
 }
+
+// Dono do sistema (quem vende as licenças)? Use nas telas /painel/dono.
+export async function exigirDono() {
+  const admin = await exigirAdmin();
+  const { data } = await admin.supabase.from("donos_sistema").select("user_id").maybeSingle();
+  if (!data) redirect("/painel");
+  return admin;
+}
