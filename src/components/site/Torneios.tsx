@@ -1,10 +1,15 @@
-import { TORNEIOS, wa } from "@/lib/arena";
+import { wa } from "@/lib/arena";
+import { torneiosFuturos, type SiteProps } from "@/lib/site";
 import Titulo from "./Titulo";
 import { perfilArena } from "@/lib/perfil";
 
-// Próximos campeonatos (fixos até o M3)
-export default async function Torneios() {
-  const p = await perfilArena();
+const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+
+// Próximos campeonatos (Configurações → Site). Os que já passaram somem.
+export default async function Torneios({ arenaId }: SiteProps) {
+  const [p, futuros] = await Promise.all([perfilArena(arenaId), torneiosFuturos(arenaId)]);
+  const TORNEIOS = futuros.map((t) => ({ ...t, dia: t.data.slice(8), mes: MESES[Number(t.data.slice(5, 7)) - 1] }));
+  if (!TORNEIOS.length) return null;
   return (
     <section id="torneios" className="mx-auto max-w-4xl scroll-mt-20 px-4 py-20">
       <Titulo tag="🏆 Campeonatos" titulo="Próximos torneios" texto="Inscreva sua crew e dispute com a comunidade." />

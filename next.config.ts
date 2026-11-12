@@ -8,9 +8,9 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" }],
   },
-  // Permite enviar logotipo (até 1MB) pelo formulário do perfil
+  // Permite enviar logotipo e fotos do site pelos formulários
   experimental: {
-    serverActions: { bodySizeLimit: "2mb" },
+    serverActions: { bodySizeLimit: "8mb" },
   },
   turbopack: {
     rules: {

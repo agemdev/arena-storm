@@ -1,10 +1,11 @@
+import type { SiteProps } from "@/lib/site";
 import { wa } from "@/lib/arena";
 import { perfilArena } from "@/lib/perfil";
 import Marca from "@/components/Marca";
 
 // Chamada final + rodapé + botão flutuante do WhatsApp
-export default async function Rodape() {
-  const p = await perfilArena();
+export default async function Rodape({ arenaId }: SiteProps) {
+  const p = await perfilArena(arenaId);
   return (
     <>
       <section className="hero-bg px-4 py-20 text-center">

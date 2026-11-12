@@ -1,18 +1,33 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/site/Header";
 import Rodape from "@/components/site/Rodape";
 import Titulo from "@/components/site/Titulo";
 import { horas, rankingPublico, type LinhaRanking } from "@/lib/ranking";
+import { resolverSite, todosSlugs } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Ranking – Arena Storm" };
+export const metadata: Metadata = { title: "Ranking" };
+
+export async function generateStaticParams() {
+  return (await todosSlugs()).map((slug) => ({ slug }));
+}
 
 // Ranking público: quem mais jogou no mês e desde sempre
-export default async function RankingPage() {
-  const [mes, sempre] = await Promise.all([rankingPublico("mes"), rankingPublico("sempre")]);
+export default function RankingPage({ params }: PageProps<"/s/[slug]/ranking">) {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <Ranking params={params} />
+    </Suspense>
+  );
+}
+
+async function Ranking({ params }: { params: PageProps<"/s/[slug]/ranking">["params"] }) {
+  const s = await resolverSite(params);
+  const [mes, sempre] = await Promise.all([rankingPublico(s.arenaId, "mes"), rankingPublico(s.arenaId, "sempre")]);
   return (
     <>
-      <Header />
+      <Header {...s} />
       <main className="mx-auto max-w-5xl px-4 py-16">
         <Titulo tag="🏆 Ranking" titulo="Quem mais joga na arena" texto="Horas jogadas pelos clientes cadastrados. Cadastre-se no balcão para entrar no ranking!" />
         <div className="grid gap-6 md:grid-cols-2">
@@ -21,12 +36,12 @@ export default async function RankingPage() {
         </div>
         <p className="mt-10 text-center text-sm text-muted-foreground">
           Quer ver seu saldo de minutos?{" "}
-          <Link href="/saldo" className="text-cyan hover:underline">
+          <Link href={`${s.base}/saldo`} className="text-cyan hover:underline">
             Consultar saldo
           </Link>
         </p>
       </main>
-      <Rodape />
+      <Rodape {...s} />
     </>
   );
 }

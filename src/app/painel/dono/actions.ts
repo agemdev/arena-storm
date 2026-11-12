@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import { exigirDono } from "@/lib/auth";
 import { lerValor } from "@/lib/caixa";
@@ -10,7 +10,10 @@ import { PLANOS_LICENCA } from "@/lib/sistema";
 export type Resultado = { ok: boolean; msg: string } | null;
 
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
-const atualizar = () => revalidatePath("/painel", "layout");
+const atualizar = () => {
+  revalidatePath("/painel", "layout");
+  updateTag("arena"); // site: arena nova/apagada
+};
 const erroBanco = (m: string) => m.replace(/^.*?:\s*/, "");
 
 // Cria o login do admin da arena (o admin pode trocar a senha depois). Sem chave secreta: usa o cadastro normal.

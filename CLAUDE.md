@@ -48,7 +48,7 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 - [ ] M8 SaaS multi-arena
 
 ## Status
-Milestone atual: M8 SaaS multi-arena (M0–M7 concluídos). Produto: "Gestor de Arena Gamer e Esports" (`src/lib/sistema.ts`). Fases: 8a base/licenças ✔ · 8b subdomínios · 8c cobrança Asaas · 8d página de vendas. Licença: aviso 4 dias antes, 5 dias de tolerância, depois só consulta (RLS `privado.arenas_escrita()`), apagar após 90 dias só com confirmação do dono (/painel/dono). Dados da arena: painel → Configurações (banco); textos fixos em `src/lib/arena.ts`.
+Milestone atual: M8 SaaS multi-arena (M0–M7 concluídos). Produto: "Gestor de Arena Gamer e Esports" (`src/lib/sistema.ts`). Fases: 8a base/licenças ✔ · 8b site por arena ✔ (rotas `src/app/s/[slug]`, `src/proxy.ts` escolhe a arena pelo endereço; textos em `site_conteudo`; falta comprar domínio e definir `NEXT_PUBLIC_DOMINIO_SISTEMA`) · 8c cobrança Asaas · 8d página de vendas. Licença: aviso 4 dias antes, 5 dias de tolerância, depois só consulta (RLS `privado.arenas_escrita()`), apagar após 90 dias só com confirmação do dono (/painel/dono). Dados da arena: painel → Configurações (banco), inclusive textos/fotos do site (Configurações → Site).
 Repo: https://github.com/agemdev/arena-storm
 Site: https://arena-storm.vercel.app (Vercel equipe `agemdev`) · Supabase: projeto `fwjwowvblkukqroyqoca` (sa-east-1)
 Migrations: `supabase/migrations/` (aplicar via conector Supabase)

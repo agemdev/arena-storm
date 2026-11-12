@@ -1,10 +1,12 @@
-import { JOGOS, NUMEROS, wa } from "@/lib/arena";
+import { wa } from "@/lib/arena";
+import { conteudoSite, type SiteProps } from "@/lib/site";
 import { agruparHorarios, horariosArena } from "@/lib/conteudo";
 import { perfilArena } from "@/lib/perfil";
 
 // Topo da página: chamada principal + horários + faixa de jogos
-export default async function Hero() {
-  const [p, horarios] = await Promise.all([perfilArena(), horariosArena()]);
+export default async function Hero({ arenaId }: SiteProps) {
+  const [p, horarios, c] = await Promise.all([perfilArena(arenaId), horariosArena(arenaId), conteudoSite(arenaId)]);
+  const JOGOS = c.jogos;
   return (
     <section className="hero-bg">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 md:grid-cols-2 md:py-24">
@@ -13,10 +15,11 @@ export default async function Hero() {
             ● GAME CENTER{p.cidade && ` · ${p.cidade.toUpperCase()}`}
           </span>
           <h1 className="mt-5 font-display text-4xl leading-tight font-bold sm:text-6xl">
-            O melhor <span className="text-gradient">lobby gamer</span> da região
+            {/* *texto* = parte colorida */}
+            {c.titulo.split("*").map((t, i) => (i % 2 ? <span key={i} className="text-gradient">{t}</span> : t))}
           </h1>
           <p className="mt-5 max-w-lg text-muted-foreground">
-            PCs gamer, PlayStation 5, simulador de corrida, realidade virtual e um espaço completo pra você e sua crew.
+            {c.chamada}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a
@@ -32,7 +35,7 @@ export default async function Hero() {
             </a>
           </div>
           <dl className="mt-10 flex gap-8">
-            {NUMEROS.map((n) => (
+            {c.numeros.map((n) => (
               <div key={n.label} className="flex flex-col">
                 <dt className="order-2 text-xs tracking-wider text-dim uppercase">{n.label}</dt>
                 <dd className="font-display text-3xl font-bold text-cyan">{n.valor}</dd>
@@ -51,13 +54,12 @@ export default async function Hero() {
               </li>
             ))}
           </ul>
-          <p className="mt-4 rounded-xl bg-purple-strong/10 p-4 text-sm text-muted-foreground">
-            🌙 <b className="text-text">Corujão</b> das 22h às 6h. Reserve com antecedência!
-          </p>
+          {c.aviso && <p className="mt-4 rounded-xl bg-purple-strong/10 p-4 text-sm text-muted-foreground">{c.aviso}</p>}
         </div>
       </div>
 
       {/* Faixa de jogos */}
+      {JOGOS.length > 0 && (
       <div className="overflow-hidden border-y border-white/5 bg-elevated py-4">
         <div className="marquee flex w-max gap-8 text-sm font-semibold whitespace-nowrap text-dim">
           {[...JOGOS, ...JOGOS].map((j, i) => (
@@ -67,6 +69,7 @@ export default async function Hero() {
           ))}
         </div>
       </div>
+      )}
     </section>
   );
 }

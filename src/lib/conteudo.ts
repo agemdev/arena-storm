@@ -5,7 +5,7 @@ import type { Horario, Plano } from "@/lib/formatos";
 export * from "@/lib/formatos";
 
 // Horários da semana (site). Em cache; limpa ao salvar nas Configurações.
-export async function horariosArena(arenaId = process.env.ARENA_ID!): Promise<Horario[]> {
+export async function horariosArena(arenaId: string): Promise<Horario[]> {
   "use cache";
   cacheTag("arena");
   cacheLife("max");
@@ -18,7 +18,7 @@ export async function horariosArena(arenaId = process.env.ARENA_ID!): Promise<Ho
 }
 
 // Planos e festas ativos (site)
-export async function planosArena(arenaId = process.env.ARENA_ID!): Promise<Plano[]> {
+export async function planosArena(arenaId: string): Promise<Plano[]> {
   "use cache";
   cacheTag("arena");
   cacheLife("max");

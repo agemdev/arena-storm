@@ -5,11 +5,12 @@ import { consultarSaldo } from "./actions";
 import { horas } from "@/lib/formatos";
 
 // Formulário de consulta de saldo (site)
-export default function Consulta() {
+export default function Consulta({ slug }: { slug: string }) {
   const [res, acao, enviando] = useActionState(consultarSaldo, null);
   return (
     <div className="mx-auto max-w-md space-y-6">
       <form action={acao} className="flex flex-col gap-3 rounded-2xl border border-white/5 bg-card p-6">
+        <input type="hidden" name="slug" value={slug} />
         <label htmlFor="whatsapp" className="text-sm font-semibold">
           Seu WhatsApp (o do cadastro)
         </label>

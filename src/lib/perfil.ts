@@ -20,7 +20,7 @@ export function urlLogo(caminho: string | null) {
 }
 
 // Perfil da arena (site e painel). Em cache; o painel limpa ao salvar o perfil.
-export async function perfilArena(arenaId = process.env.ARENA_ID!): Promise<PerfilPublico> {
+export async function perfilArena(arenaId: string): Promise<PerfilPublico> {
   "use cache";
   cacheTag("arena");
   cacheLife("max");

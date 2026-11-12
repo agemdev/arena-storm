@@ -1,8 +1,10 @@
-import { FAQ } from "@/lib/arena";
+import { conteudoSite, type SiteProps } from "@/lib/site";
 import Titulo from "./Titulo";
 
 // Perguntas frequentes (abre/fecha sem JavaScript)
-export default function Faq() {
+export default async function Faq({ arenaId }: SiteProps) {
+  const { faq: FAQ } = await conteudoSite(arenaId);
+  if (!FAQ.length) return null;
   return (
     <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 py-20">
       <Titulo tag="❓ Dúvidas" titulo="Perguntas frequentes" />

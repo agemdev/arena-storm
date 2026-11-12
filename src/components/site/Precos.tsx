@@ -1,11 +1,12 @@
+import type { SiteProps } from "@/lib/site";
 import { wa } from "@/lib/arena";
 import { planosArena, reais } from "@/lib/conteudo";
 import Titulo from "./Titulo";
 import { perfilArena } from "@/lib/perfil";
 
 // Tabela de preços. Todo botão abre o WhatsApp.
-export default async function Precos() {
-  const [p, todos] = await Promise.all([perfilArena(), planosArena()]);
+export default async function Precos({ arenaId }: SiteProps) {
+  const [p, todos] = await Promise.all([perfilArena(arenaId), planosArena(arenaId)]);
   const planos = todos.filter((x) => x.categoria === "plano");
   const festas = todos.filter((x) => x.categoria === "festa");
   return (

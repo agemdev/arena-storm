@@ -1,32 +1,23 @@
 import Image from "next/image";
 import Titulo from "./Titulo";
 import { perfilArena } from "@/lib/perfil";
+import { conteudoSite, type SiteProps } from "@/lib/site";
 
-// Fotos em public/fotos (tiradas do perfil no Google)
-const FOTOS = [
-  { src: "pcs-neon", alt: "PCs gamer com luz neon", grande: true },
-  { src: "simulador", alt: "Criança no simulador de corrida" },
-  { src: "ps5", alt: "Crianças jogando PlayStation 5" },
-  { src: "pcs", alt: "Arena cheia nos PCs" },
-  { src: "criancas", alt: "Crianças jogando nos PCs" },
-  { src: "fachada", alt: "Fachada da Arena Storm à noite", grande: true },
-  { src: "ambiente", alt: "Ambiente da arena com geladeira de bebidas" },
-  { src: "festa", alt: "Arena decorada para festa de aniversário" },
-];
-
-export default async function Galeria() {
-  const { instagram } = await perfilArena();
+// Fotos do site (Configurações → Site). Sem fotos, a seção some.
+export default async function Galeria({ arenaId }: SiteProps) {
+  const [{ instagram }, { fotos: FOTOS }] = await Promise.all([perfilArena(arenaId), conteudoSite(arenaId)]);
+  if (!FOTOS.length) return null;
   return (
     <section id="fotos" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-20">
-      <Titulo tag="📸 Fotos" titulo="Por dentro da Arena" />
+      <Titulo tag="📸 Fotos" titulo="Por dentro da arena" />
       <div className="grid auto-rows-[160px] grid-cols-2 gap-3 md:auto-rows-[200px] md:grid-cols-4">
         {FOTOS.map((f) => (
           <div
-            key={f.src}
+            key={f.url}
             className={`relative overflow-hidden rounded-2xl ${f.grande ? "col-span-2 row-span-2" : ""}`}
           >
             <Image
-              src={`/fotos/${f.src}.jpg`}
+              src={f.url}
               alt={f.alt}
               fill
               sizes={f.grande ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 768px) 25vw, 50vw"}
