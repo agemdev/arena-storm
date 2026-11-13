@@ -86,7 +86,7 @@ export function NovaArena({ venceSugerido }: { venceSugerido: string }) {
         <Input id="n-email" name="email" type="email" required />
       </Campo>
       <Campo id="n-senha" rotulo="Senha provisória (mín. 8)">
-        <Input id="n-senha" name="senha" type="text" minLength={8} required autoComplete="off" />
+        <Input id="n-senha" name="senha" type="text" minLength={8} placeholder="vazia = login que já existe" autoComplete="off" />
       </Campo>
       <div className="flex items-end sm:col-span-2">
         <Button type="submit" disabled={enviando}>
@@ -158,7 +158,7 @@ export function NovoAdmin({ arenaId }: { arenaId: string }) {
     <form key={res?.ok ? res.msg : "f"} action={acao} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="arena_id" value={arenaId} />
       <Input name="email" type="email" placeholder="E-mail do novo admin" aria-label="E-mail" className="w-56" required />
-      <Input name="senha" type="text" minLength={8} placeholder="Senha provisória" aria-label="Senha provisória" className="w-40" autoComplete="off" required />
+      <Input name="senha" type="text" minLength={8} placeholder="Senha (vazia = já existe)" aria-label="Senha provisória" className="w-48" autoComplete="off" />
       <Button type="submit" size="sm" variant="outline" disabled={enviando}>
         Adicionar admin
       </Button>

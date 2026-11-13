@@ -23,10 +23,21 @@ async function criarLogin(email: string, senha: string): Promise<{ erro: string 
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await sb.auth.signUp({ email, password: senha });
-  if (error) return { erro: error.message.includes("already") ? "Esse e-mail já tem login." : `Não deu para criar o login: ${error.message}` };
+  if (error?.message.includes("already")) return { erro: "existe" };
+  if (error?.message.toLowerCase().includes("invalid"))
+    return {
+      erro: "O Supabase só cria login por aqui com e-mail real (ex.: @gmail.com). Para e-mail inventado (ex.: @arena.storm): crie no painel do Supabase → Authentication → Add user (marque Auto Confirm) e depois use “Admins” aqui só com o e-mail, sem senha.",
+    };
+  if (error) return { erro: `Não deu para criar o login: ${error.message}` };
   // E-mail já cadastrado: o Supabase devolve usuário sem "identities"
-  if (!data.user || data.user.identities?.length === 0) return { erro: "Esse e-mail já tem login. Use “Adicionar admin” com outro e-mail." };
+  if (!data.user || data.user.identities?.length === 0) return { erro: "existe" };
   return { id: data.user.id, confirmar: !data.session };
+}
+
+// Login já existente (criado antes ou no painel do Supabase) → liga pelo e-mail
+async function ligarPorEmail(supabase: Awaited<ReturnType<typeof exigirDono>>["supabase"], arenaId: string, email: string) {
+  const { error } = await supabase.rpc("vincular_admin_email", { p_arena: arenaId, p_email: email });
+  return error ? erroBanco(error.message) : null;
 }
 
 // Nova arena + licença + login do admin
@@ -49,7 +60,7 @@ export async function criarArena(_: Resultado, form: FormData): Promise<Resultad
   if (plano !== "cortesia" && !DATA.test(vence)) return { ok: false, msg: "Informe o vencimento da licença." };
   if (!(valor >= 0)) return { ok: false, msg: "Valor inválido." };
   if (!/^\S+@\S+\.\S+$/.test(email)) return { ok: false, msg: "E-mail do admin inválido." };
-  if (senha.length < 8) return { ok: false, msg: "Senha provisória: mínimo 8 caracteres." };
+  if (senha && senha.length < 8) return { ok: false, msg: "Senha provisória: mínimo 8 caracteres (ou vazia para login que já existe)." };
 
   const { data: arenaId, error } = await supabase.rpc("criar_arena", {
     p_nome: nome,
@@ -64,9 +75,15 @@ export async function criarArena(_: Resultado, form: FormData): Promise<Resultad
   if (error?.code === "23505") return { ok: false, msg: "Esse endereço (apelido) já é de outra arena." };
   if (error) return { ok: false, msg: `Erro ao criar a arena: ${erroBanco(error.message)}` };
 
-  const login = await criarLogin(email, senha);
   atualizar();
-  if ("erro" in login) return { ok: false, msg: `Arena criada, mas o login não: ${login.erro} Use “Adicionar admin” na lista.` };
+  // Sem senha (ou e-mail que já tem login): só liga o login existente
+  const login = senha ? await criarLogin(email, senha) : { erro: "existe" };
+  if ("erro" in login) {
+    if (login.erro !== "existe") return { ok: false, msg: `Arena criada, mas o login não: ${login.erro}` };
+    const e = await ligarPorEmail(supabase, arenaId, email);
+    if (e) return { ok: false, msg: `Arena criada, mas o login não: ${e} Depois use “Admins” na lista.` };
+    return { ok: true, msg: `${nome} criada e ligada ao login que já existia (${email}).` };
+  }
   const { error: e2 } = await supabase.rpc("vincular_admin", { p_arena: arenaId, p_user: login.id });
   if (e2) return { ok: false, msg: `Arena e login criados, mas não deu para ligar os dois: ${erroBanco(e2.message)}` };
   return {
@@ -126,10 +143,17 @@ export async function adicionarAdmin(_: Resultado, form: FormData): Promise<Resu
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   const senha = String(form.get("senha") ?? "");
   if (!/^\S+@\S+\.\S+$/.test(email)) return { ok: false, msg: "E-mail inválido." };
-  if (senha.length < 8) return { ok: false, msg: "Senha provisória: mínimo 8 caracteres." };
-  const login = await criarLogin(email, senha);
-  if ("erro" in login) return { ok: false, msg: login.erro };
-  const { error } = await supabase.rpc("vincular_admin", { p_arena: String(form.get("arena_id")), p_user: login.id });
+  if (senha && senha.length < 8) return { ok: false, msg: "Senha provisória: mínimo 8 caracteres (ou vazia para login que já existe)." };
+  const arenaId = String(form.get("arena_id"));
+  const login = senha ? await criarLogin(email, senha) : { erro: "existe" };
+  if ("erro" in login) {
+    if (login.erro !== "existe") return { ok: false, msg: login.erro };
+    const e = await ligarPorEmail(supabase, arenaId, email);
+    if (e) return { ok: false, msg: e };
+    atualizar();
+    return { ok: true, msg: `Login ${email} (que já existia) ligado à arena.` };
+  }
+  const { error } = await supabase.rpc("vincular_admin", { p_arena: arenaId, p_user: login.id });
   if (error) return { ok: false, msg: erroBanco(error.message) };
   atualizar();
   return { ok: true, msg: `Admin ${email} adicionado${login.confirmar ? " (precisa confirmar pelo e-mail)" : ""}.` };
