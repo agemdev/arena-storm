@@ -200,7 +200,8 @@ export async function ativarCobranca(_: Resultado, form: FormData): Promise<Resu
 
   const { data: l } = await supabase.from("licencas").select("asaas_cliente_id, asaas_assinatura_id, arenas(nome)").eq("arena_id", arenaId).single();
   if (!l) return { ok: false, msg: "Licença não encontrada." };
-  if (l.asaas_assinatura_id) return { ok: false, msg: "A cobrança automática já está ligada. Desligue antes para mudar." };
+  const avulsa = form.get("modo") === "avulsa"; // só uma fatura agora (sem assinatura)
+  if (l.asaas_assinatura_id && !avulsa) return { ok: false, msg: "A cobrança automática já está ligada. Desligue antes para mudar." };
   const arenaNome = (l.arenas as unknown as { nome: string } | null)?.nome ?? "Arena";
 
   // Guarda os dados de quem paga
@@ -221,13 +222,33 @@ export async function ativarCobranca(_: Resultado, form: FormData): Promise<Resu
     await supabase.from("licencas").update({ asaas_cliente_id: clienteId }).eq("arena_id", arenaId);
   }
 
+  const descricao = `Licença ${PLANOS_LICENCA[plano as keyof typeof PLANOS_LICENCA].nome} – ${NOME_SISTEMA} – ${arenaNome}`;
+  if (avulsa) {
+    // Fatura única: o Asaas envia por e-mail; quando pagar, a licença renova pelo período escolhido
+    const f = await asaas<{ id: string; invoiceUrl: string; dueDate: string }>("POST", "/payments", {
+      customer: clienteId,
+      billingType: "UNDEFINED",
+      value: valor,
+      dueDate: primeira,
+      description: descricao,
+      externalReference: arenaId,
+    });
+    if (!f.ok) return { ok: false, msg: f.erro };
+    await supabase
+      .from("licencas")
+      .update({ cobranca_id: f.dados.id, cobranca_vence: f.dados.dueDate, link_pagamento: f.dados.invoiceUrl })
+      .eq("arena_id", arenaId);
+    atualizar();
+    return { ok: true, msg: `Fatura criada e enviada para ${email}. Link: ${f.dados.invoiceUrl}` };
+  }
+
   const a = await asaas<{ id: string }>("POST", "/subscriptions", {
     customer: clienteId,
     billingType: "UNDEFINED", // o cliente escolhe Pix, boleto ou cartão na fatura
     value: valor,
     nextDueDate: primeira,
     cycle: CICLOS[plano as keyof typeof CICLOS],
-    description: `Licença ${PLANOS_LICENCA[plano as keyof typeof PLANOS_LICENCA].nome} – ${NOME_SISTEMA} – ${arenaNome}`,
+    description: descricao,
     externalReference: arenaId,
   });
   if (!a.ok) return { ok: false, msg: a.erro };

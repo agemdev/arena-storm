@@ -210,6 +210,30 @@ export function TokenWebhook({ definido }: { definido: boolean }) {
 }
 
 // Ligar / desligar a cobrança automática de uma arena
+// Fatura em aberto: abrir, copiar ou mandar pelo WhatsApp (o Asaas já envia por e-mail)
+function FaturaAberta({ a }: { a: ArenaDono }) {
+  if (!a.link_pagamento) return null;
+  const fone = (a.celular || a.contato || "").replace(/\D/g, "");
+  const numero = fone.length === 10 || fone.length === 11 ? `55${fone}` : fone;
+  const msg = encodeURIComponent(`Olá! Segue a fatura da licença do sistema da ${a.nome}: ${a.link_pagamento}`);
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-cyan/40 bg-cyan/5 p-2 text-sm">
+      <span>
+        🧾 Fatura em aberto{a.cobranca_vence ? ` (vence ${a.cobranca_vence.split("-").reverse().join("/")})` : ""}
+      </span>
+      <a href={a.link_pagamento} target="_blank" rel="noopener" className="text-cyan underline">
+        abrir
+      </a>
+      <button type="button" className="text-cyan underline" onClick={() => navigator.clipboard.writeText(a.link_pagamento!)}>
+        copiar link
+      </button>
+      <a href={`https://wa.me/${numero}?text=${msg}`} target="_blank" rel="noopener" className="rounded-full bg-green px-2 py-0.5 font-semibold text-black">
+        Enviar pelo WhatsApp
+      </a>
+    </div>
+  );
+}
+
 export function Cobranca({ a, hoje }: { a: ArenaDono; hoje: string }) {
   const [res, acao, enviando] = useActionState(ativarCobranca, null);
   const [resC, cancelar, cancelando] = useActionState(cancelarCobranca, null);
@@ -217,14 +241,7 @@ export function Cobranca({ a, hoje }: { a: ArenaDono; hoje: string }) {
     return (
       <div className="space-y-2 text-sm">
         <p className="text-green">✓ Cobrança automática ligada ({a.asaas_assinatura_id}). A licença renova sozinha quando o pagamento cai.</p>
-        {a.link_pagamento && (
-          <p>
-            Fatura em aberto{a.cobranca_vence ? ` (vence ${a.cobranca_vence.split("-").reverse().join("/")})` : ""}:{" "}
-            <a href={a.link_pagamento} target="_blank" rel="noopener" className="text-cyan underline">
-              abrir
-            </a>
-          </p>
-        )}
+        <FaturaAberta a={a} />
         <form action={cancelar} className="flex items-center gap-3">
           <input type="hidden" name="arena_id" value={a.id} />
           <Button type="submit" size="sm" variant="destructive" disabled={cancelando}>
@@ -236,38 +253,47 @@ export function Cobranca({ a, hoje }: { a: ArenaDono; hoje: string }) {
     );
   const primeira = a.vence_em && a.vence_em > hoje ? a.vence_em : hoje;
   return (
-    <form action={acao} className="grid gap-2 sm:grid-cols-3">
-      <input type="hidden" name="arena_id" value={a.id} />
-      <Campo id={`c-resp-${a.id}`} rotulo="Quem paga (nome)">
-        <Input id={`c-resp-${a.id}`} name="responsavel" defaultValue={a.responsavel ?? ""} required />
-      </Campo>
-      <Campo id={`c-doc-${a.id}`} rotulo="CPF ou CNPJ">
-        <Input id={`c-doc-${a.id}`} name="cpf_cnpj" inputMode="numeric" defaultValue={a.cpf_cnpj ?? ""} required />
-      </Campo>
-      <Campo id={`c-email-${a.id}`} rotulo="E-mail (recebe a fatura)">
-        <Input id={`c-email-${a.id}`} name="email" type="email" defaultValue={a.email ?? ""} required />
-      </Campo>
-      <Campo id={`c-cel-${a.id}`} rotulo="Celular (opcional)">
-        <Input id={`c-cel-${a.id}`} name="celular" inputMode="tel" defaultValue={a.celular ?? ""} />
-      </Campo>
-      <Campo id={`c-plano-${a.id}`} rotulo="Período">
-        <SelectPlano id={`c-plano-${a.id}`} valor={a.plano === "cortesia" ? "mensal" : (a.plano ?? "mensal")} semCortesia />
-      </Campo>
-      <Campo id={`c-valor-${a.id}`} rotulo="Valor (R$)">
-        <Input id={`c-valor-${a.id}`} name="valor" inputMode="decimal" defaultValue={a.valor ? String(a.valor).replace(".", ",") : ""} required />
-      </Campo>
-      <Campo id={`c-prim-${a.id}`} rotulo="Primeira cobrança vence em">
-        <Input id={`c-prim-${a.id}`} name="primeira" type="date" defaultValue={primeira} min={hoje} required />
-      </Campo>
-      <div className="flex items-end sm:col-span-2">
-        <Button type="submit" size="sm" disabled={enviando}>
-          {enviando ? "Ligando..." : "Ligar cobrança automática"}
-        </Button>
-      </div>
-      <div className="sm:col-span-3">
-        <p className="text-xs text-muted-foreground">O Asaas manda a fatura (Pix, boleto ou cartão) para o e-mail. Quando pagar, a licença renova sozinha.</p>
-        <Msg res={res} />
-      </div>
-    </form>
+    <div className="space-y-3">
+      <FaturaAberta a={a} />
+      <form action={acao} className="grid gap-2 sm:grid-cols-3">
+        <input type="hidden" name="arena_id" value={a.id} />
+        <Campo id={`c-resp-${a.id}`} rotulo="Quem paga (nome)">
+          <Input id={`c-resp-${a.id}`} name="responsavel" defaultValue={a.responsavel ?? ""} required />
+        </Campo>
+        <Campo id={`c-doc-${a.id}`} rotulo="CPF ou CNPJ">
+          <Input id={`c-doc-${a.id}`} name="cpf_cnpj" inputMode="numeric" defaultValue={a.cpf_cnpj ?? ""} required />
+        </Campo>
+        <Campo id={`c-email-${a.id}`} rotulo="E-mail (recebe a fatura)">
+          <Input id={`c-email-${a.id}`} name="email" type="email" defaultValue={a.email ?? ""} required />
+        </Campo>
+        <Campo id={`c-cel-${a.id}`} rotulo="Celular (opcional)">
+          <Input id={`c-cel-${a.id}`} name="celular" inputMode="tel" defaultValue={a.celular ?? ""} />
+        </Campo>
+        <Campo id={`c-plano-${a.id}`} rotulo="Período">
+          <SelectPlano id={`c-plano-${a.id}`} valor={a.plano === "cortesia" ? "mensal" : (a.plano ?? "mensal")} semCortesia />
+        </Campo>
+        <Campo id={`c-valor-${a.id}`} rotulo="Valor (R$)">
+          <Input id={`c-valor-${a.id}`} name="valor" inputMode="decimal" defaultValue={a.valor ? String(a.valor).replace(".", ",") : ""} required />
+        </Campo>
+        <Campo id={`c-prim-${a.id}`} rotulo="Vencimento (1ª cobrança)">
+          <Input id={`c-prim-${a.id}`} name="primeira" type="date" defaultValue={primeira} min={hoje} required />
+        </Campo>
+        <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
+          <Button type="submit" name="modo" value="assinatura" size="sm" disabled={enviando}>
+            {enviando ? "Enviando..." : "Ligar cobrança automática"}
+          </Button>
+          <Button type="submit" name="modo" value="avulsa" size="sm" variant="outline" disabled={enviando}>
+            Só enviar uma fatura agora
+          </Button>
+        </div>
+        <div className="sm:col-span-3">
+          <p className="text-xs text-muted-foreground">
+            Automática: o Asaas cobra todo período sozinho. Fatura única: cobra só uma vez. Nos dois casos a fatura (Pix, boleto ou cartão) vai para o e-mail e,
+            quando pagar, a licença renova sozinha.
+          </p>
+          <Msg res={res} />
+        </div>
+      </form>
+    </div>
   );
 }

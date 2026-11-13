@@ -50,6 +50,9 @@ export default async function AvisoLicenca() {
             💳 Pagar agora (Pix, boleto ou cartão)
           </a>
         )}
+        <Link href="/painel/configuracoes/assinatura" className="rounded-full bg-background/60 px-3 py-0.5 font-semibold underline">
+          Assinatura
+        </Link>
         <a href={renovar} target="_blank" rel="noopener" className="rounded-full bg-background/60 px-3 py-0.5 font-semibold underline">
           {l.link_pagamento ? "Dúvidas? WhatsApp" : "Renovar pelo WhatsApp"}
         </a>
