@@ -5,12 +5,14 @@ import { createServerClient } from "@supabase/ssr";
 const SLUG_PADRAO = process.env.SITE_PADRAO ?? "arenastorm";
 const DOMINIO = (process.env.NEXT_PUBLIC_DOMINIO_SISTEMA ?? "").toLowerCase();
 
-// "arenax.seudominio.com.br" → "arenax". Endereço principal, www, vercel.app e localhost → arena padrão.
+// "arenax.seudominio.com.br" → "arenax". Domínio do sistema puro (ou www) → null (página de vendas).
+// Sem domínio próprio (vercel.app, localhost) → arena padrão.
 function slugDoEndereco(host: string) {
   const h = host.toLowerCase().split(":")[0];
+  if (DOMINIO && (h === DOMINIO || h === `www.${DOMINIO}`)) return null;
   if (DOMINIO && h.endsWith(`.${DOMINIO}`)) {
     const sub = h.slice(0, -(DOMINIO.length + 1));
-    if (sub && sub !== "www" && !sub.includes(".")) return sub;
+    if (sub && !sub.includes(".")) return sub;
   }
   return SLUG_PADRAO;
 }
@@ -20,8 +22,18 @@ export async function proxy(request: NextRequest) {
   const rota = request.nextUrl.pathname;
   if (rota.startsWith("/painel") || rota === "/login") return login(request, rota);
 
+  // Página de vendas do sistema
+  if (rota === "/sistema") return NextResponse.next();
+
   // Site público: o endereço diz qual arena mostrar
   const slug = slugDoEndereco(request.headers.get("host") ?? "");
+  if (!slug) {
+    // Domínio do sistema: início = página de vendas; /s/apelido continua funcionando
+    if (rota !== "/") return NextResponse.next();
+    const url = request.nextUrl.clone();
+    url.pathname = "/sistema";
+    return NextResponse.rewrite(url);
+  }
   const prefixo = `/s/${slug}`;
   // Link antigo/de teste da própria arena (/s/apelido/...) → endereço limpo
   if (rota === prefixo || rota.startsWith(`${prefixo}/`)) {
