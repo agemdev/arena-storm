@@ -128,7 +128,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
   for (const p of pagosDia ?? []) {
     porForma[p.forma as Forma] += Number(p.valor);
     const at = p.atendimentos as unknown as { data: string; fiado_em: string | null } | null;
-    if (at?.fiado_em && at.data !== data) fiadoRecebido += Number(p.valor);
+    if (at?.fiado_em && at.data !== data && ["dinheiro", "pix", "cartao"].includes(p.forma)) fiadoRecebido += Number(p.valor);
   }
   const emUso = linhas.filter((l) => l.t.emUso).length;
 
@@ -180,8 +180,10 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
         <Resumo titulo="Dinheiro" valor={reais(porForma.dinheiro)} />
         <Resumo titulo="Pix" valor={reais(porForma.pix)} />
         <Resumo titulo="Cartão" valor={reais(porForma.cartao)} />
-        <Resumo titulo="Pago em minutos" valor={reais(porForma.minutos)} />
-        <Resumo titulo="Pago com pacote" valor={reais(porForma.pacote)} />
+        <Resumo titulo="💵 Entrou em dinheiro (total)" valor={reais(porForma.dinheiro + porForma.pix + porForma.cartao)} destaque />
+        {/* Minutos e pacote NÃO são dinheiro: só descontam saldo do cliente */}
+        <Resumo titulo="Pago em minutos (saldo)" valor={`${Math.round(porForma.minutos)} min`} />
+        <Resumo titulo="Pago com pacote (saldo)" valor={reais(porForma.pacote)} />
         <Resumo titulo="A receber" valor={reais(aReceber)} alerta={aReceber > 0} />
         <Resumo titulo="📒 Fiado do dia" valor={reais(fiadoDia)} />
         <Resumo titulo="Fiado recebido" valor={reais(fiadoRecebido)} />
