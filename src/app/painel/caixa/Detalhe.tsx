@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
 import { reais } from "@/lib/formatos";
-import { duracao, faltaParaPagar, FORMAS, FUSO, hhmm, totais, type AtendimentoLinha, type Forma } from "@/lib/caixa";
+import { duracao, faltaParaPagar, tempoAPagar, FORMAS, FUSO, hhmm, totais, type AtendimentoLinha, type Forma } from "@/lib/caixa";
 import { Button } from "@/components/ui/button";
 import Janela from "@/components/painel/Janela";
 import UsoAoVivo from "@/components/painel/UsoAoVivo";
@@ -25,7 +25,7 @@ import EscolherProduto, { type ProdutoOpcao } from "./EscolherProduto";
 
 type Detalhe = Omit<AtendimentoLinha, "consumos" | "pagamentos"> & {
   consumos: { id: string; descricao: string; quantidade: number; valor_unit: number; total: number }[];
-  pagamentos: { id: string; forma: Forma; valor: number; criado_em: string; minutos_pacote: number | null; clientes: { nome: string } | null }[];
+  pagamentos: { id: string; forma: Forma; valor: number; criado_em: string; minutos_pacote: number | null; minutos_usados: number | null; clientes: { nome: string } | null }[];
 };
 
 // Janela flutuante de um atendimento: tempo, consumo, pagamento e correções
@@ -34,7 +34,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
   const { data } = await supabase
     .from("atendimentos")
     .select(
-      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, fiado_em, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em, minutos_pacote, clientes(nome))",
+      "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, fiado_em, equipamentos(nome), consumos(id, descricao, quantidade, valor_unit, total), pagamentos(id, forma, valor, criado_em, minutos_pacote, minutos_usados, clientes(nome))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -116,7 +116,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                     )}
                     {pagaCom && (
                       <p className="text-sm text-purple">
-                        ⏱ Paga com minutos de <b>{pagaCom.nome}</b> ({pagaCom.saldo} min): desconta sozinho ao encerrar.
+                        ⏱ Paga com minutos de <b>{pagaCom.nome}</b> ({pagaCom.saldo} min): 1 min de saldo = 1 min de jogo, desconta sozinho ao encerrar.
                       </p>
                     )}
                     <div className="flex flex-wrap gap-2">
@@ -271,7 +271,7 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                   ))
                 )}
                 {!t.emUso && <AjustarValor id={a.id} calculado={t.valorUso + t.consumo} total={t.total} temAjuste={t.ajuste !== 0} />}
-                <Receber atendimentoId={a.id} falta={faltaParaPagar(a)} clienteId={a.cliente_id} minutosDe={a.minutos_de} comSaldo={comSaldo} pacoteDe={a.pacote_de} comPacote={comPacote} valorHora={Number(a.valor_hora)} />
+                <Receber atendimentoId={a.id} falta={faltaParaPagar(a)} clienteId={a.cliente_id} minutosDe={a.minutos_de} comSaldo={comSaldo} pacoteDe={a.pacote_de} comPacote={comPacote} valorHora={Number(a.valor_hora)} tempoAPagar={tempoAPagar(a)} />
 
                 {a.pagamentos.length > 0 && (
                   <ul className="divide-y divide-border rounded-lg border border-border text-sm">
@@ -280,7 +280,8 @@ export default async function DetalheJanela({ id, fecharHref }: { id: string; fe
                         <span className="flex-1">
                           {FORMAS[p.forma]}
                           {(p.forma === "minutos" || p.forma === "pacote") && p.clientes && <span className="text-purple"> de {p.clientes.nome}</span>}
-                          {p.minutos_pacote && <span className="text-cyan"> ({duracao(p.minutos_pacote)} h)</span>}{" "}
+                          {p.minutos_pacote && <span className="text-cyan"> ({duracao(p.minutos_pacote)} h)</span>}
+                          {p.minutos_usados && <span className="text-purple"> ({p.minutos_usados} min)</span>}{" "}
                           <span className="text-muted-foreground">· {hhmm(p.criado_em)}</span>
                         </span>
                         <span>{reais(Number(p.valor))}</span>

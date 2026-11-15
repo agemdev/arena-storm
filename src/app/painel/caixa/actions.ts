@@ -6,6 +6,7 @@ import { exigirAdmin } from "@/lib/auth";
 import {
   calcularUso,
   faltaParaPagar,
+  tempoAPagar,
   FORMAS,
   hojeISO,
   lerValor,
@@ -22,6 +23,20 @@ const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 const atualizar = () => revalidatePath("/painel", "layout");
 const uuidOuNulo = (v: FormDataEntryValue | null) => (/^[0-9a-f-]{36}$/.test(String(v ?? "")) ? String(v) : null);
+
+// Tempo livre pago com minutos/pacote: o fim vira a hora em que o saldo acaba (avisa e encerra como tempo determinado)
+async function fimPeloSaldo(supabase: Awaited<ReturnType<typeof exigirAdmin>>["supabase"], inicio: string, minutosDe: string | null, pacoteDe: string | null) {
+  let minutos = 0;
+  if (minutosDe) {
+    const { data } = await supabase.from("minutos_saldos").select("saldo").eq("cliente_id", minutosDe).maybeSingle();
+    minutos += Math.max(0, Number(data?.saldo ?? 0));
+  }
+  if (pacoteDe) {
+    const { data } = await supabase.from("pacote_saldos").select("saldo").eq("cliente_id", pacoteDe).maybeSingle();
+    minutos += Math.max(0, Number(data?.saldo ?? 0));
+  }
+  return minutos > 0 ? new Date(new Date(inicio).getTime() + minutos * 60000).toISOString() : null;
+}
 
 // Novo atendimento. "equipamento_id": id da máquina, "livre" (tempo sem máquina fixa) ou vazio (só consumo)
 export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Resultado> {
@@ -44,6 +59,10 @@ export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Re
   if (!(valorHora >= 0)) return { ok: false, msg: "Valor/hora inválido." };
 
   const inicio = comTempo ? paraTimestamp(data, hIni) : null;
+  const pacoteDe = comTempo ? uuidOuNulo(form.get("pacote_de")) : null;
+  let fimPrevisto = comTempo && hPrev ? paraTimestamp(data, hPrev, inicio!) : null;
+  // Só com saldo (sem hora para acabar): para quando os minutos/pacote acabarem
+  if (comTempo && !fimPrevisto && (minutosDe || pacoteDe)) fimPrevisto = await fimPeloSaldo(supabase, inicio!, minutosDe, pacoteDe);
   const { data: novo, error } = await supabase
     .from("atendimentos")
     .insert({
@@ -53,10 +72,10 @@ export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Re
       nome,
       equipamento_id: equipamentoId,
       inicio,
-      fim_previsto: comTempo && hPrev ? paraTimestamp(data, hPrev, inicio!) : null,
+      fim_previsto: fimPrevisto,
       valor_hora: comTempo ? valorHora : 0,
       minutos_de: comTempo ? minutosDe : null,
-      pacote_de: comTempo ? uuidOuNulo(form.get("pacote_de")) : null,
+      pacote_de: pacoteDe,
     })
     .select("id")
     .single();
@@ -156,7 +175,10 @@ export async function salvarAtendimento(_: Resultado, form: FormData): Promise<R
   const inicio = comTempo ? paraTimestamp(a.data, hIni) : null;
   // Já encerrado: mantém encerrado (campo fim). Em uso: só muda o previsto.
   const fim = comTempo && a.fim && hFim ? paraTimestamp(a.data, hFim, inicio!) : null;
-  const fimPrevisto = comTempo && !fim && hPrev ? paraTimestamp(a.data, hPrev, inicio!) : null;
+  let fimPrevisto = comTempo && !fim && hPrev ? paraTimestamp(a.data, hPrev, inicio!) : null;
+  const minDeNovo = comTempo ? uuidOuNulo(form.get("minutos_de")) : null;
+  const pacDeNovo = comTempo ? uuidOuNulo(form.get("pacote_de")) : null;
+  if (comTempo && !fim && !a.fim && !fimPrevisto && (minDeNovo || pacDeNovo)) fimPrevisto = await fimPeloSaldo(supabase, inicio!, minDeNovo, pacDeNovo);
   const valorUso = fim ? calcularUso(inicio, fim, valorHora).valor : 0;
 
   const { error } = await supabase
@@ -170,8 +192,8 @@ export async function salvarAtendimento(_: Resultado, form: FormData): Promise<R
       fim_previsto: fimPrevisto,
       valor_hora: comTempo ? valorHora : 0,
       valor_uso: valorUso,
-      minutos_de: comTempo ? uuidOuNulo(form.get("minutos_de")) : null,
-      pacote_de: comTempo ? uuidOuNulo(form.get("pacote_de")) : null,
+      minutos_de: minDeNovo,
+      pacote_de: pacDeNovo,
       observacao: String(form.get("observacao") ?? "").trim().slice(0, 300) || null,
     })
     .eq("id", id);
@@ -249,15 +271,29 @@ export async function removerConsumo(form: FormData) {
 export async function receber(_: Resultado, form: FormData): Promise<Resultado> {
   const { supabase, arenaId } = await exigirAdmin();
   const forma = String(form.get("forma"));
-  const valor = lerValor(String(form.get("valor") ?? ""));
+  let valor = lerValor(String(form.get("valor") ?? ""));
   if (!(forma in FORMAS)) return { ok: false, msg: "Escolha a forma de pagamento." };
-  if (!(valor > 0)) return { ok: false, msg: "Digite o valor recebido." };
 
-  const { data: at } = await supabase.from("atendimentos").select("cancelado_em, valor_hora").eq("id", String(form.get("atendimento_id"))).single();
-  if (at?.cancelado_em) return { ok: false, msg: "Atendimento cancelado: desfaça o cancelamento antes de receber." };
+  const { data: atd } = await supabase.from("atendimentos").select(SELECT_ATENDIMENTO).eq("id", String(form.get("atendimento_id"))).single();
+  const at = atd as unknown as AtendimentoLinha | null;
+  if (!at) return { ok: false, msg: "Atendimento não encontrado." };
+  if (at.cancelado_em) return { ok: false, msg: "Atendimento cancelado: desfaça o cancelamento antes de receber." };
+  const valorHora = Number(at.valor_hora ?? 0);
+  if ((forma === "pacote" || forma === "minutos") && !(valorHora > 0))
+    return { ok: false, msg: "Minutos e pacote só pagam tempo de uso (atendimento sem preço/hora)." };
+
+  // Minutos: 1 min de saldo = 1 min de jogo → vale preço/hora ÷ 60 (só o tempo, não o consumo)
+  let minutosUsados: number | null = null;
+  if (forma === "minutos") {
+    const pedidos = Math.floor(Number(String(form.get("minutos") ?? "").replace(/\D/g, "")) || 0);
+    const limite = tempoAPagar(at);
+    if (!(pedidos > 0)) return { ok: false, msg: "Digite quantos minutos usar." };
+    if (!(limite > 0)) return { ok: false, msg: "Não há tempo de jogo a pagar (minutos não pagam consumo)." };
+    valor = Math.min(Math.round(((pedidos * valorHora) / 60) * 100) / 100, limite);
+    minutosUsados = Math.min(pedidos, Math.ceil((valor * 60) / valorHora - 0.0001));
+  }
+  if (!(valor > 0)) return { ok: false, msg: "Digite o valor recebido." };
   // Pacote de horas: o valor vira minutos de jogo pelo preço/hora do atendimento
-  const valorHora = Number(at?.valor_hora ?? 0);
-  if (forma === "pacote" && !(valorHora > 0)) return { ok: false, msg: "Pacote de horas só paga tempo de uso (atendimento sem preço/hora)." };
   const minutosPacote = forma === "pacote" ? Math.ceil((valor * 60) / valorHora - 0.0001) : null;
 
   const { error } = await supabase
@@ -269,6 +305,7 @@ export async function receber(_: Resultado, form: FormData): Promise<Resultado> 
       valor,
       cliente_minutos_id: forma === "minutos" || forma === "pacote" ? uuidOuNulo(form.get("cliente_minutos_id")) : null, // de quem sai o saldo
       minutos_pacote: minutosPacote,
+      minutos_usados: minutosUsados,
     });
   if (error?.message.includes("insuficiente")) return { ok: false, msg: error.message };
   if (error?.message.includes("escolha de qual cliente")) return { ok: false, msg: "Escolha de qual cliente sai o saldo." };

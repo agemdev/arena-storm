@@ -17,6 +17,7 @@ type Props = {
   pacoteDe: string | null;
   comPacote: ComSaldo[];
   valorHora: number;
+  tempoAPagar: number; // R$ do tempo de jogo ainda em aberto (minutos/pacote só pagam isso)
 };
 
 // Botões de forma de pagamento + valor (já vem com o que falta)
@@ -29,6 +30,7 @@ export default function Receber({
   pacoteDe,
   comPacote,
   valorHora,
+  tempoAPagar,
 }: Props) {
   const [res, acao, enviando] = useActionState(receber, null);
   const [forma, setForma] = useState<Forma | "">("");
@@ -46,7 +48,7 @@ export default function Receber({
     forma === "minutos" && pagador
       ? Math.min(falta, saldo)
       : forma === "pacote" && pagadorPac
-        ? Math.min(falta, valorPac)
+        ? Math.min(tempoAPagar, valorPac)
         : falta;
   const quem = forma === "pacote" ? pagadorPac : pagador;
   const sugestao =
@@ -58,10 +60,10 @@ export default function Receber({
     setForma(f);
     setDigitado(null);
   };
-  const minutosSugeridos = Math.max(
-    0,
-    Math.min(Math.ceil(falta - 0.001), saldo),
-  );
+  // 1 min de saldo = 1 min de jogo (vale preço/hora ÷ 60)
+  const valorMinuto = valorHora > 0 ? valorHora / 60 : 0;
+  const minutosDoTempo = valorMinuto > 0 ? Math.ceil(tempoAPagar / valorMinuto - 0.0001) : 0;
+  const minutosSugeridos = Math.max(0, Math.min(minutosDoTempo, saldo));
   const minutosUsar =
     forma === "minutos"
       ? digitado === null
@@ -71,7 +73,7 @@ export default function Receber({
   // Valor em R$ que vai para o caixa (minutos: nunca mais que o que falta)
   const valorAtual =
     forma === "minutos"
-      ? Math.round(Math.min(minutosUsar, falta) * 100) / 100
+      ? Math.min(Math.round(minutosUsar * valorMinuto * 100) / 100, tempoAPagar)
       : digitado === null
         ? sugestaoMin
         : lerValor(digitado) || 0;
@@ -193,11 +195,7 @@ export default function Receber({
         {forma === "minutos" ? (
           <>
             {/* Digita minutos; vai para o caixa o valor equivalente em R$ */}
-            <input
-              type="hidden"
-              name="valor"
-              value={valorAtual.toFixed(2).replace(".", ",")}
-            />
+            <input type="hidden" name="minutos" value={minutosUsar} />
             <Input
               value={digitado ?? String(minutosSugeridos)}
               onChange={(e) => setDigitado(e.target.value)}
@@ -205,7 +203,9 @@ export default function Receber({
               aria-label="Minutos a usar"
               className="w-24"
             />
-            <span className="text-sm">min = {reais(valorAtual)}</span>
+            <span className="text-sm">
+              min de jogo = {reais(valorAtual)}
+            </span>
           </>
         ) : (
           <Input
@@ -248,8 +248,8 @@ export default function Receber({
         <p
           className={`text-xs ${faltaMinutos ? "text-destructive" : "text-muted-foreground"}`}
         >
-          Digite quantos MINUTOS usar (R$ 1 = 1 min). Saldo de quem foi
-          escolhido: {saldo} min.
+          1 minuto de saldo = 1 minuto de jogo ({reais(valorMinuto)}/min). Minutos pagam só o tempo ({minutosDoTempo} min em aberto), não o consumo. Saldo de
+          quem foi escolhido: {saldo} min.
           {faltaMinutos
             ? " Saldo insuficiente."
             : " Quer pagar só uma parte em minutos? Diminua os minutos e escolha como pagar o resto."}

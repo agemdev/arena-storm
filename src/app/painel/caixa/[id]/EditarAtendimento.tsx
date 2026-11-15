@@ -131,7 +131,7 @@ export default function EditarAtendimento(p: Props) {
           <Label htmlFor="e-min">Pagar com minutos de</Label>
           <UsarMinutos id="e-min" comSaldo={p.comSaldo} name="minutos_de" value={minDe} onChange={setMinDe} primeiro={clienteAtual} />
           <p className="text-xs text-muted-foreground">
-            {encerrado ? "Já encerrado: para cobrar agora, use Receber → Pacote ou Minutos." : "Ao encerrar, desconta sozinho: primeiro o pacote (tempo), depois os minutos (R$)."}
+            {encerrado ? "Já encerrado: para cobrar agora, use Receber → Pacote ou Minutos." : "Ao encerrar, desconta sozinho: primeiro o pacote, depois os minutos (1 min de saldo = 1 min de jogo)."}
           </p>
         </div>
       )}

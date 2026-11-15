@@ -160,7 +160,7 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
               {cliente.nome} tem {comSaldo.find((c) => c.id === cliente.id)!.saldo} min. Usar?
             </button>
           )}
-          {minDe && <p className="text-xs text-muted-foreground">Ao encerrar, desconta sozinho até o saldo dar. O que faltar fica a receber.</p>}
+          {minDe && <p className="text-xs text-muted-foreground">1 min de saldo = 1 min de jogo. Sem hora para acabar, o tempo para (com alerta) quando os minutos acabarem; se puser um fim depois, o resto fica a receber.</p>}
         </div>
       )}
 

@@ -124,6 +124,13 @@ export function faltaParaPagar(a: AtendimentoLinha) {
   return Math.round((Math.max(0, previsto + t.consumo + t.ajuste) - t.pago) * 100) / 100;
 }
 
+// Quanto do TEMPO de jogo ainda falta pagar (minutos e pacote só pagam tempo, não consumo)
+export function tempoAPagar(a: AtendimentoLinha) {
+  const t = totais(a);
+  const valorTempo = t.emUso && a.fim_previsto ? calcularUso(a.inicio, a.fim_previsto, Number(a.valor_hora)).valor : t.valorUso;
+  return Math.max(0, Math.round(Math.min(faltaParaPagar(a), valorTempo) * 100) / 100);
+}
+
 export const SELECT_ATENDIMENTO =
   "id, data, nome, cliente_id, equipamento_id, inicio, fim, fim_previsto, valor_hora, valor_uso, observacao, ajuste, ajuste_motivo, cancelado_em, cancelado_motivo, criado_em, minutos_de, pacote_de, fiado_em, equipamentos(nome), consumos(total), pagamentos(forma, valor)";
 

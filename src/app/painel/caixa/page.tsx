@@ -120,13 +120,15 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
   const lim = limitesDoDia(data);
   const { data: pagosDia } = await supabase
     .from("pagamentos")
-    .select("forma, valor, atendimentos(data, fiado_em)")
+    .select("forma, valor, minutos_usados, atendimentos(data, fiado_em)")
     .gte("criado_em", lim.de)
     .lt("criado_em", lim.ate);
   const porForma = Object.fromEntries(Object.keys(FORMAS).map((f) => [f, 0])) as Record<Forma, number>;
   let fiadoRecebido = 0;
+  let minutosUsadosDia = 0; // minutos de saldo gastos no dia
   for (const p of pagosDia ?? []) {
     porForma[p.forma as Forma] += Number(p.valor);
+    if (p.forma === "minutos") minutosUsadosDia += Number(p.minutos_usados ?? Math.ceil(Number(p.valor)));
     const at = p.atendimentos as unknown as { data: string; fiado_em: string | null } | null;
     if (at?.fiado_em && at.data !== data && ["dinheiro", "pix", "cartao"].includes(p.forma)) fiadoRecebido += Number(p.valor);
   }
@@ -182,7 +184,7 @@ async function Caixa({ searchParams }: { searchParams: Busca }) {
         <Resumo titulo="Cartão" valor={reais(porForma.cartao)} />
         <Resumo titulo="💵 Entrou em dinheiro (total)" valor={reais(porForma.dinheiro + porForma.pix + porForma.cartao)} destaque />
         {/* Minutos e pacote NÃO são dinheiro: só descontam saldo do cliente */}
-        <Resumo titulo="Pago em minutos (saldo)" valor={`${Math.round(porForma.minutos)} min`} />
+        <Resumo titulo="Pago em minutos (saldo)" valor={`${minutosUsadosDia} min (${reais(porForma.minutos)})`} />
         <Resumo titulo="Pago com pacote (saldo)" valor={reais(porForma.pacote)} />
         <Resumo titulo="A receber" valor={reais(aReceber)} alerta={aReceber > 0} />
         <Resumo titulo="📒 Fiado do dia" valor={reais(fiadoDia)} />
