@@ -13,7 +13,7 @@ Código: E:\Dev\arena-storm (backup: GitHub). Docs: E:\OneDrive\Arena Storm\Sist
 - Agente PCs: Electron + SQLite local (offline-first, fila de sync)
 - PC Servidor da arena (hoje roda Gizmo Server): futuro hub local LAN; substitui o Gizmo.
 - Toda tabela tem `arena_id` + RLS ativo.
-- Banco de Minutos = tabela de lançamentos (ledger). Nunca editar saldo direto. R$1 = 1 min.
+- Banco de Minutos = tabela de lançamentos (ledger). Nunca editar saldo direto. Ganha: R$1 pago = 1 min. Usa: 1 min de saldo = 1 min de jogo (vale preço/hora ÷ 60; só paga tempo, não consumo).
 
 ## Decisões de negócio
 - Sem pagamento online. Todo "pagar/reservar" → link WhatsApp da Arena:
