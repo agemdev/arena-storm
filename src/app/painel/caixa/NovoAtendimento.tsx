@@ -73,10 +73,10 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
         <NativeSelect id="equipamento_id" name="equipamento_id" value={equip} onChange={(e) => setEquip(e.target.value)}>
           <option value="livre">Livre (qualquer máquina)</option>
           {equipamentos.map((e) => (
-            <option key={e.id} value={e.id} disabled={e.emUso || !!e.bloqueio}>
+            <option key={e.id} value={e.id} disabled={e.emUso}>
               {e.nome}
               {e.emUso ? " (em uso)" : ""}
-              {e.bloqueio ? ` (${e.bloqueio})` : ""}
+              {e.bloqueio ? ` (${e.bloqueio}: inicia e libera)` : ""}
               {e.reserva ? ` ⚠ reservada às ${e.reserva}` : ""}
               {e.tv ? ` ⚠ TV em uso (${e.tv})` : ""}
             </option>
@@ -85,6 +85,9 @@ function Campos({ data, agora, valorHora, clientes, equipamentos, equipInicial, 
         </NativeSelect>
         {escolhida?.reserva && (
           <p className="text-xs text-amber">⚠ Esta máquina tem reserva às {escolhida.reserva}. Combine o fim antes desse horário.</p>
+        )}
+        {escolhida?.bloqueio && (
+          <p className="text-xs text-cyan">Está em “{escolhida.bloqueio}”. Ao iniciar, a máquina volta ao normal e o tempo já começa (o PC não trava).</p>
         )}
         {escolhida?.tv && <p className="text-xs text-amber">⚠ A TV desta máquina está em uso pelo {escolhida.tv}.</p>}
       </div>

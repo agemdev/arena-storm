@@ -22,6 +22,7 @@ export type Uso = {
   equipamento_id: string;
   inicio: string;
   fim: string | null;
+  situacao?: boolean; // manutenção / funcionário / sem cobrança
 };
 
 export type Bloco = {
@@ -189,22 +190,30 @@ export default function LinhaDoTempo({
                     .map((u) => {
                       const ini = new Date(u.inicio).getTime();
                       const fimMs = u.fim ? new Date(u.fim).getTime() : ate;
-                      const texto = u.fim
-                        ? `🎮 ${u.nome} · em uso até ${hhmm(u.fim)}`
-                        : `⏳ ${u.nome} · tempo livre desde ${hhmm(u.inicio)}`;
+                      const texto = u.situacao
+                        ? `${u.nome} · desde ${hhmm(u.inicio)}`
+                        : u.fim
+                          ? `🎮 ${u.nome} · em uso até ${hhmm(u.fim)}`
+                          : `⏳ ${u.nome} · tempo livre desde ${hhmm(u.inicio)}`;
                       return (
                         <button
                           key={`uso-${u.id}`}
                           type="button"
                           onClick={() =>
                             iniciar(() =>
-                              router.push(`/painel/caixa?abrir=${u.id}`),
+                              router.push(
+                                u.situacao
+                                  ? "/painel/maquinas"
+                                  : `/painel/caixa?abrir=${u.id}`,
+                              ),
                             )
                           }
                           className={`absolute bottom-1 h-[calc(50%-0.375rem)] overflow-hidden rounded-md px-1.5 text-left text-xs font-semibold whitespace-nowrap ${
-                            u.fim
-                              ? "border border-cyan bg-cyan/25 text-cyan"
-                              : "border border-r-0 border-amber bg-gradient-to-r from-amber/35 to-amber/5 text-amber"
+                            u.situacao
+                              ? "border border-r-0 border-zinc-400 bg-gradient-to-r from-zinc-500/40 to-zinc-500/5 text-zinc-200"
+                              : u.fim
+                                ? "border border-cyan bg-cyan/25 text-cyan"
+                                : "border border-r-0 border-amber bg-gradient-to-r from-amber/35 to-amber/5 text-amber"
                           }`}
                           style={{
                             left: pct(ini),
@@ -252,6 +261,9 @@ export default function LinhaDoTempo({
         </span>
         <span className="rounded border border-amber bg-amber/20 px-1.5 text-amber">
           ⏳ em uso, tempo livre (sem hora para acabar)
+        </span>
+        <span className="rounded border border-zinc-400 bg-zinc-500/30 px-1.5 text-zinc-200">
+          🔧 manutenção / 👤 funcionário / 🎁 sem cobrança
         </span>
       </p>
       <p className="text-xs text-muted-foreground">

@@ -82,6 +82,9 @@ export async function abrirAtendimento(_: Resultado, form: FormData): Promise<Re
 
   if (error?.code === "23505") return { ok: false, msg: "Essa máquina já está em uso. Encerre o atendimento dela primeiro." };
   if (error) return { ok: false, msg: "Erro ao abrir atendimento." };
+  // Máquina estava em manutenção/funcionário/sem cobrança: volta ao normal DEPOIS de criar o tempo (o PC passa direto para "em uso")
+  if (equipamentoId)
+    await supabase.from("equipamentos").update({ situacao: "normal", situacao_obs: null, situacao_desde: null }).eq("id", equipamentoId).neq("situacao", "normal");
 
   atualizar();
   // Só consumo → abre a janela dele para lançar os produtos

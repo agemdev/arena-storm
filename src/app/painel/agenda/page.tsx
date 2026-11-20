@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { exigirAdmin } from "@/lib/auth";
-import { dataExtenso, hhmm, hojeISO, somarDias } from "@/lib/caixa";
+import { dataExtenso, hhmm, hojeISO, SITUACOES_MAQUINA, somarDias } from "@/lib/caixa";
 import { janelaDoDia, SELECT_AGENDA, SITUACOES, TIPOS_AGENDA, type AgendaLinha } from "@/lib/agenda";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,7 +32,7 @@ async function Agenda({ searchParams }: { searchParams: PageProps<"/painel/agend
 
   const [ags, equips, clientes, planos, horario, emUso] = await Promise.all([
     supabase.from("agendamentos").select(SELECT_AGENDA).lt("inicio", ate).gt("fim", de).order("inicio"),
-    supabase.from("equipamentos").select("id, nome").eq("ativo", true).order("ordem"),
+    supabase.from("equipamentos").select("id, nome, situacao, situacao_obs, situacao_desde").eq("ativo", true).order("ordem"),
     supabase.from("clientes").select("id, nome, whatsapp").order("nome").limit(5000),
     supabase.from("planos").select("id, categoria, nome, preco, descricao").eq("arena_id", arenaId).eq("ativo", true).order("ordem"),
     supabase
@@ -54,9 +54,23 @@ async function Agenda({ searchParams }: { searchParams: PageProps<"/painel/agend
   // Tempo determinado: só se ainda vai até este dia; tempo livre: só no dia de hoje
   const usos: Uso[] = (emUso.data ?? [])
     .filter((u) => (u.fim_previsto ? new Date(u.fim_previsto).getTime() > new Date(de).getTime() : data === hoje))
-    .map((u) => ({ id: u.id, nome: u.nome, equipamento_id: u.equipamento_id!, inicio: u.inicio!, fim: u.fim_previsto }));
+    .map((u) => ({ id: u.id, nome: u.nome, equipamento_id: u.equipamento_id!, inicio: u.inicio!, fim: u.fim_previsto }) as Uso);
+  // Manutenção / funcionário / sem cobrança (só hoje): aparece como "ocupada sem hora para acabar"
+  if (data === hoje)
+    for (const e of equips.data ?? []) {
+      if (!e.situacao || e.situacao === "normal") continue;
+      const s = SITUACOES_MAQUINA[e.situacao as keyof typeof SITUACOES_MAQUINA];
+      usos.push({
+        id: `sit-${e.id}`,
+        nome: `${s.icone} ${s.nome}${e.situacao_obs ? ` · ${e.situacao_obs}` : ""}`,
+        equipamento_id: e.id,
+        inicio: e.situacao_desde ?? new Date(de).toISOString(),
+        fim: null,
+        situacao: true,
+      });
+    }
   const lista = (ags.data ?? []) as unknown as AgendaLinha[];
-  const equipamentos = equips.data ?? [];
+  const equipamentos = (equips.data ?? []).map((e) => ({ id: e.id, nome: e.nome }));
   const festas = (planos.data ?? []).filter((p) => p.categoria === "festa").map((p) => ({ ...p, preco: Number(p.preco) }));
   const valorCorujao = Number((planos.data ?? []).find((p) => /coruj/i.test(p.nome))?.preco ?? 0);
 
