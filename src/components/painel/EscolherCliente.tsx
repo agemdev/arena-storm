@@ -110,7 +110,7 @@ export default function EscolherCliente({ clientes, inicial, onChange, autoFocus
 }
 
 // Cliente não encontrado → cadastra ali mesmo (só nome + WhatsApp) e já seleciona
-function CadastroRapido({ nome, semResultado, onCadastrado }: { nome: string; semResultado: boolean; onCadastrado: (c: ClienteOpcao) => void }) {
+export function CadastroRapido({ nome, semResultado, onCadastrado }: { nome: string; semResultado: boolean; onCadastrado: (c: ClienteOpcao) => void }) {
   const [aberto, setAberto] = useState(false);
   const [nomeNovo, setNomeNovo] = useState(nome);
   const [whats, setWhats] = useState("");

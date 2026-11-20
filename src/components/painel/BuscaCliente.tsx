@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CadastroRapido } from "./EscolherCliente";
 
 export type ClienteOpcao = { id: string; nome: string; whatsapp: string };
 
@@ -71,6 +72,17 @@ export default function BuscaCliente({ clientes, rotulo = "Cliente", nomeInicial
             </li>
           ))}
         </ul>
+      )}
+      {/* Não achou: cadastra ali mesmo (nome + WhatsApp) */}
+      {!cliente && busca.trim().length >= 2 && (
+        <CadastroRapido
+          nome={busca}
+          semResultado={sugestoes.length === 0}
+          onCadastrado={(c) => {
+            escolher(c);
+            setAberto(false);
+          }}
+        />
       )}
       <p className="text-xs text-muted-foreground">
         {cliente ? <span className="text-green">✓ Cliente cadastrado</span> : busca.trim() ? "Não cadastrado (ok). Escolha da lista se for cadastrado." : "Digite para buscar."}

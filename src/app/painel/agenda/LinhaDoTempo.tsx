@@ -11,6 +11,9 @@ import { TIPOS_AGENDA, type Situacao, type TipoAgenda } from "@/lib/agenda";
 import { hhmm } from "@/lib/caixa";
 import FormAgendamento, { type Festa, type Inicial, type ReservaDia } from "./FormAgendamento";
 
+// Máquina em uso agora no Caixa (fim = null → tempo livre)
+export type Uso = { id: string; nome: string; equipamento_id: string; inicio: string; fim: string | null };
+
 export type Bloco = { id: string; tipo: TipoAgenda; nome: string; situacao: Situacao; equipamento_id: string; inicio: string; fim: string };
 
 type Props = {
@@ -19,6 +22,7 @@ type Props = {
   ate: number; // fim da régua (ms)
   equipamentos: { id: string; nome: string }[];
   blocos: Bloco[];
+  usos: Uso[];
   abrirHref: string; // endereço com "abrir=" no fim
   clientes: ClienteOpcao[];
   festas: Festa[];
@@ -26,7 +30,7 @@ type Props = {
 };
 
 // Agenda do dia: máquinas nas linhas, horas nas colunas. Clique no vazio = novo; no bloco = abrir.
-export default function LinhaDoTempo({ data, de, ate, equipamentos, blocos, abrirHref, clientes, festas, valorCorujao }: Props) {
+export default function LinhaDoTempo({ data, de, ate, equipamentos, blocos, usos, abrirHref, clientes, festas, valorCorujao }: Props) {
   const router = useRouter();
   const agora = useAgora();
   const [abrindo, iniciar] = useTransition();
@@ -107,6 +111,30 @@ export default function LinhaDoTempo({ data, de, ate, equipamentos, blocos, abri
                 {agora !== null && agora > de && agora < ate && (
                   <span className="pointer-events-none absolute inset-y-0 z-10 border-l-2 border-destructive" style={{ left: pct(agora) }} />
                 )}
+                {/* Em uso no Caixa: azul até o fim combinado; laranja (tempo livre) do início até a borda */}
+                {usos
+                  .filter((u) => u.equipamento_id === e.id)
+                  .map((u) => {
+                    const ini = new Date(u.inicio).getTime();
+                    const fimMs = u.fim ? new Date(u.fim).getTime() : ate;
+                    const texto = u.fim ? `🎮 ${u.nome} · em uso até ${hhmm(u.fim)}` : `⏳ ${u.nome} · tempo livre desde ${hhmm(u.inicio)}`;
+                    return (
+                      <button
+                        key={`uso-${u.id}`}
+                        type="button"
+                        onClick={() => iniciar(() => router.push(`/painel/caixa?abrir=${u.id}`))}
+                        className={`absolute inset-y-1 overflow-hidden rounded-md px-1.5 text-left text-xs font-semibold whitespace-nowrap ${
+                          u.fim
+                            ? "border border-cyan bg-cyan/25 text-cyan"
+                            : "border border-r-0 border-amber bg-gradient-to-r from-amber/35 to-amber/5 text-amber"
+                        }`}
+                        style={{ left: pct(ini), width: `calc(${pct(fimMs)} - ${pct(ini)})` }}
+                        title={`${texto} (clique para abrir no Caixa)`}
+                      >
+                        {texto}
+                      </button>
+                    );
+                  })}
                 {blocos
                   .filter((b) => b.equipamento_id === e.id)
                   .map((b) => (
@@ -128,6 +156,10 @@ export default function LinhaDoTempo({ data, de, ate, equipamentos, blocos, abri
           ))}
         </div>
       </div>
+      <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="rounded border border-cyan bg-cyan/25 px-1.5 text-cyan">🎮 em uso até o fim combinado</span>
+        <span className="rounded border border-amber bg-amber/20 px-1.5 text-amber">⏳ em uso, tempo livre (sem hora para acabar)</span>
+      </p>
       <p className="text-xs text-muted-foreground">Borda tracejada = agendado · borda cheia = confirmado · apagado = já foi para o Caixa · linha vermelha = agora.</p>
 
       {novo && (

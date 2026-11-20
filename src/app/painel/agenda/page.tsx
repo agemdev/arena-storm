@@ -6,7 +6,7 @@ import { janelaDoDia, SELECT_AGENDA, SITUACOES, TIPOS_AGENDA, type AgendaLinha }
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import LinhaClicavel from "../caixa/LinhaClicavel";
-import LinhaDoTempo, { type Bloco } from "./LinhaDoTempo";
+import LinhaDoTempo, { type Bloco, type Uso } from "./LinhaDoTempo";
 import DetalheAgenda from "./Detalhe";
 import AoVivo from "@/components/painel/AoVivo";
 
@@ -30,7 +30,7 @@ async function Agenda({ searchParams }: { searchParams: PageProps<"/painel/agend
   const comAbrir = `${base}${base.includes("?") ? "&" : "?"}abrir=`;
   const { de, ate } = janelaDoDia(data);
 
-  const [ags, equips, clientes, planos, horario] = await Promise.all([
+  const [ags, equips, clientes, planos, horario, emUso] = await Promise.all([
     supabase.from("agendamentos").select(SELECT_AGENDA).lt("inicio", ate).gt("fim", de).order("inicio"),
     supabase.from("equipamentos").select("id, nome").eq("ativo", true).order("ordem"),
     supabase.from("clientes").select("id, nome, whatsapp").order("nome").limit(5000),
@@ -41,7 +41,20 @@ async function Agenda({ searchParams }: { searchParams: PageProps<"/painel/agend
       .eq("arena_id", arenaId)
       .eq("dia", new Date(`${data}T12:00:00Z`).getUTCDay())
       .maybeSingle(),
+    // Máquinas em uso agora no Caixa (para saber se o horário está livre)
+    supabase
+      .from("atendimentos")
+      .select("id, nome, equipamento_id, inicio, fim_previsto")
+      .is("fim", null)
+      .is("cancelado_em", null)
+      .not("inicio", "is", null)
+      .not("equipamento_id", "is", null)
+      .lt("inicio", ate),
   ]);
+  // Tempo determinado: só se ainda vai até este dia; tempo livre: só no dia de hoje
+  const usos: Uso[] = (emUso.data ?? [])
+    .filter((u) => (u.fim_previsto ? new Date(u.fim_previsto).getTime() > new Date(de).getTime() : data === hoje))
+    .map((u) => ({ id: u.id, nome: u.nome, equipamento_id: u.equipamento_id!, inicio: u.inicio!, fim: u.fim_previsto }));
   const lista = (ags.data ?? []) as unknown as AgendaLinha[];
   const equipamentos = equips.data ?? [];
   const festas = (planos.data ?? []).filter((p) => p.categoria === "festa").map((p) => ({ ...p, preco: Number(p.preco) }));
@@ -62,6 +75,10 @@ async function Agenda({ searchParams }: { searchParams: PageProps<"/painel/agend
   for (const a of visiveis) {
     ini = Math.min(ini, new Date(a.inicio).getTime());
     fim = Math.max(fim, new Date(a.fim).getTime());
+  }
+  for (const u of usos) {
+    ini = Math.min(ini, new Date(u.inicio).getTime());
+    if (u.fim) fim = Math.max(fim, new Date(u.fim).getTime());
   }
   ini = Math.max(Math.floor(ini / H) * H, new Date(de).getTime());
   fim = Math.min(Math.ceil(fim / H) * H, new Date(ate).getTime());
@@ -104,6 +121,7 @@ async function Agenda({ searchParams }: { searchParams: PageProps<"/painel/agend
         ate={fim}
         equipamentos={equipamentos}
         blocos={blocos}
+        usos={usos}
         abrirHref={comAbrir}
         clientes={clientes.data ?? []}
         festas={festas}
