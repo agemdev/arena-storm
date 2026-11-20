@@ -6,7 +6,6 @@ import { hhmm, hojeISO, SELECT_ATENDIMENTO, totais, type AtendimentoLinha } from
 import { fiadosAbertos } from "@/lib/caixa-servidor";
 import { janelaDoDia, SELECT_AGENDA, SITUACOES, TIPOS_AGENDA, type AgendaLinha } from "@/lib/agenda";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import AoVivo from "@/components/painel/AoVivo";
 import Indicadores from "@/components/painel/Indicadores";
 import EscolherPeriodo from "@/components/painel/EscolherPeriodo";
 import { dadosPeriodo, lerPeriodo } from "@/lib/relatorio";
@@ -64,7 +63,6 @@ async function Resumo() {
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">{arenaNome}</h1>
-      <AoVivo />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Cartao href="/painel/caixa" titulo="Caixa de hoje" valor={reais(totalHoje)} />
         <Cartao href="/painel/caixa" titulo="Máquinas em uso" valor={String(emUso)} />

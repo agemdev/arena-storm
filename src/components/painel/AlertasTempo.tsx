@@ -11,7 +11,7 @@ import { useAgora } from "./UsoAoVivo";
 type EmUso = { id: string; nome: string; equipamento: string; fimPrevisto: string };
 type Encerrado = { id: string; nome: string; equipamento: string };
 
-const CONSULTA_MS = 30_000; // pergunta ao servidor a cada 30 s
+const CONSULTA_MS = 30_000; // pergunta ao servidor a cada 30 s (aba escondida: a cada 2 min)
 
 // Bipes: "acabando" = 2 bipes agudos; "acabou" = 3 bipes mais graves e longos
 function bipe(tipo: "acabando" | "acabou" = "acabando") {
@@ -60,7 +60,12 @@ export default function AlertasTempo() {
 
   useEffect(() => {
     const primeira = setTimeout(consultar, 0);
-    const t = setInterval(consultar, CONSULTA_MS);
+    let ultima = 0;
+    const t = setInterval(() => {
+      if (document.visibilityState !== "visible" && Date.now() - ultima < 120_000) return;
+      ultima = Date.now();
+      consultar();
+    }, CONSULTA_MS);
     return () => {
       clearTimeout(primeira);
       clearInterval(t);
